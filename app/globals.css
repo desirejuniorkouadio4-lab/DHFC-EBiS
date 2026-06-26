@@ -1,0 +1,300 @@
+@import "tailwindcss";
+
+/*
+ * ============================================================
+ *  DHFC-EBiS — Design System (tokens)
+ *  Conforme au cahier des charges §4 (Identité visuelle)
+ * ============================================================
+ */
+
+@theme {
+  /* ----- Orange DHFC — déclinaisons ----- */
+  --color-orange-50: #fff4e6;
+  --color-orange-100: #ffe4bf;
+  --color-orange-200: #ffcb80;
+  --color-orange-300: #ffb14d;
+  --color-orange-400: #fa9f1f;
+  --color-orange-500: #f39200; /* base */
+  --color-orange-600: #c97600;
+  --color-orange-700: #9e5a00;
+  --color-orange-800: #6f3f00;
+  --color-orange-900: #422600;
+
+  /* ----- Vert DHFC — déclinaisons ----- */
+  --color-green-50: #e6f7ee;
+  --color-green-100: #bfeacf;
+  --color-green-200: #80d6a1;
+  --color-green-300: #4dc07c;
+  --color-green-400: #1faa5a;
+  --color-green-500: #009640; /* base */
+  --color-green-600: #007d35;
+  --color-green-700: #00642a;
+  --color-green-800: #00481e;
+  --color-green-900: #002a12;
+
+  /* ----- Neutres ----- */
+  --color-neutral-0: #ffffff;
+  --color-neutral-50: #fafafa;
+  --color-neutral-100: #f4f4f5;
+  --color-neutral-200: #e4e4e7;
+  --color-neutral-300: #d4d4d8;
+  --color-neutral-400: #a1a1aa;
+  --color-neutral-500: #71717a;
+  --color-neutral-600: #52525b;
+  --color-neutral-700: #3f3f46;
+  --color-neutral-800: #27272a;
+  --color-neutral-900: #18181b;
+  --color-neutral-950: #09090b;
+
+  /* ----- Sémantique ----- */
+  --color-success: #009640;
+  --color-warning: #f59e0b;
+  --color-danger: #dc2626;
+  --color-info: #2563eb;
+
+  /* ----- Familles de polices ----- */
+  --font-display: var(--font-space-grotesk), "Cabinet Grotesk", system-ui, sans-serif;
+  --font-sans: var(--font-inter), system-ui, sans-serif;
+
+  /* ----- Rayons ----- */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-2xl: 24px;
+  --radius-3xl: 32px;
+
+  /* ----- Échelle typographique display (§4.5) ----- */
+  --text-display-2xl: 4.5rem; /* 72px */
+  --text-display-2xl--line-height: 1;
+  --text-display-2xl--letter-spacing: -0.02em;
+  --text-display-xl: 3.75rem; /* 60px */
+  --text-display-xl--line-height: 1.05;
+  --text-display-xl--letter-spacing: -0.02em;
+  --text-display-lg: 3rem; /* 48px */
+  --text-display-lg--line-height: 1.1;
+  --text-display-lg--letter-spacing: -0.01em;
+
+  /* ----- Easings & durées (§22.4) ----- */
+  --ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* ----- Animations ----- */
+  --animate-marquee: marquee 40s linear infinite;
+  --animate-float: float 6s ease-in-out infinite;
+}
+
+/* ----- Variables sémantiques (mode clair) ----- */
+:root {
+  --bg-primary: var(--color-neutral-0);
+  --bg-secondary: var(--color-neutral-50);
+  --bg-elevated: #ffffff;
+  --text-primary: var(--color-neutral-950);
+  --text-secondary: var(--color-neutral-500);
+  --border-subtle: var(--color-neutral-200);
+  --orange-accent: var(--color-orange-500);
+  --green-accent: var(--color-green-500);
+  color-scheme: light;
+}
+
+/* ----- Mode sombre (§4.3) ----- */
+[data-theme="dark"] {
+  --bg-primary: var(--color-neutral-950);
+  --bg-secondary: var(--color-neutral-900);
+  --bg-elevated: var(--color-neutral-800);
+  --text-primary: var(--color-neutral-50);
+  --text-secondary: var(--color-neutral-400);
+  --border-subtle: var(--color-neutral-800);
+  --orange-accent: #ffa630; /* orange désaturé */
+  --green-accent: #2bb860;
+  color-scheme: dark;
+}
+
+/* ============================================================
+ *  Base
+ * ============================================================ */
+
+@layer base {
+  * {
+    border-color: var(--border-subtle);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  ::selection {
+    background-color: var(--color-orange-500);
+    color: #ffffff;
+  }
+
+  /* Focus visible accessible (RGAA / WCAG 2.2 §24) */
+  :focus-visible {
+    outline: 2px solid var(--color-orange-500);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+}
+
+/* ============================================================
+ *  Utilitaires & composition
+ * ============================================================ */
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .text-gradient-orange {
+    background: linear-gradient(120deg, var(--color-orange-500), var(--color-orange-300));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .text-gradient-brand {
+    background: linear-gradient(120deg, var(--color-orange-500) 0%, var(--color-orange-400) 40%, var(--color-green-500) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .bg-grid {
+    background-image:
+      linear-gradient(to right, var(--color-neutral-200) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--color-neutral-200) 1px, transparent 1px);
+    background-size: 56px 56px;
+    mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, #000 40%, transparent 100%);
+  }
+
+  [data-theme="dark"] .bg-grid {
+    background-image:
+      linear-gradient(to right, var(--color-neutral-800) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--color-neutral-800) 1px, transparent 1px);
+  }
+
+  .bg-dots {
+    background-image: radial-gradient(var(--color-neutral-300) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+
+  .glass {
+    background: color-mix(in srgb, var(--bg-primary) 72%, transparent);
+    backdrop-filter: blur(14px) saturate(160%);
+    -webkit-backdrop-filter: blur(14px) saturate(160%);
+  }
+
+  .shadow-brand {
+    box-shadow: 0 10px 40px -12px color-mix(in srgb, var(--color-orange-500) 45%, transparent);
+  }
+}
+
+/* ============================================================
+ *  Keyframes
+ * ============================================================ */
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-12px); }
+}
+
+@keyframes shimmer {
+  100% { transform: translateX(100%); }
+}
+
+/* ============================================================
+ *  Accessibilité — prefers-reduced-motion (§23.3 / §24.2)
+ * ============================================================ */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Scrollbar discrète */
+@media (min-width: 768px) {
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-neutral-300);
+    border-radius: 9999px;
+    border: 2px solid var(--bg-secondary);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--color-orange-400);
+  }
+}
+
+/* ============================================================
+ *  Expérience mobile « app native »
+ * ============================================================ */
+@layer utilities {
+  /* Masque la scrollbar (carrousels horizontaux) */
+  .scrollbar-none {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Défilement tactile fluide + snap horizontal */
+  .touch-pan-x {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+
+  /* Safe-areas (encoche / barre système) */
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .pt-safe {
+    padding-top: env(safe-area-inset-top);
+  }
+  .h-bottom-nav {
+    height: calc(4rem + env(safe-area-inset-bottom));
+  }
+  /* Réserve l'espace de la barre d'onglets mobile sous le contenu */
+  .pb-bottom-nav {
+    padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+  }
+}
+
+/* Améliore le tap mobile (supprime le flash bleu) */
+@media (max-width: 1023px) {
+  a,
+  button {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
