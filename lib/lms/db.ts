@@ -153,3 +153,122 @@ export async function getResumeLessonId(userId: string, slug: string): Promise<s
   const resume = curriculum.flat.find((l) => !completed.has(l.id)) ?? curriculum.flat[0];
   return resume.id;
 }
+
+/* ----------------------------------------------------------------
+ *  Badges, statistiques et activité (dashboard / profil)
+ * ---------------------------------------------------------------- */
+
+export type BadgeView = {
+  slug: string;
+  name: string;
+  description: string;
+  icon: string;
+  rarity: string;
+  earned: boolean;
+};
+
+/** Tous les badges + indicateur « obtenu » pour l'utilisateur. */
+export async function getUserBadges(userId: string): Promise<BadgeView[]> {
+  const [badges, earned] = await Promise.all([
+    prisma.badge.findMany(),
+    prisma.userBadge.findMany({ where: { userId }, select: { badgeId: true } }),
+  ]);
+  const earnedSet = new Set(earned.map((e) => e.badgeId));
+  return badges.map((b) => ({
+    slug: b.slug,
+    name: b.name,
+    description: b.description ?? "",
+    icon: b.icon,
+    rarity: b.rarity,
+    earned: earnedSet.has(b.id),
+  }));
+}
+
+export type UserStats = {
+  hours: number;
+  quizPassed: number;
+  streak: number;
+  badges: number;
+};
+
+/** Statistiques personnelles calculées depuis la base. */
+export async function getUserStats(userId: string): Promise<UserStats> {
+  const [completedLessons, quizPassed, badges, user] = await Promise.all([
+    prisma.lessonProgress.findMany({
+      where: { userId, completed: true },
+      select: { lesson: { select: { durationMin: true } } },
+    }),
+    prisma.lessonProgress.count({
+      where: { userId, completed: true, lesson: { type: "QUIZ" } },
+    }),
+    prisma.userBadge.count({ where: { userId } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { streak: true } }),
+  ]);
+  const minutes = completedLessons.reduce((acc, p) => acc + p.lesson.durationMin, 0);
+  return {
+    hours: Math.round(minutes / 60),
+    quizPassed,
+    streak: user?.streak ?? 0,
+    badges,
+  };
+}
+
+export type ActivityView = {
+  type: "lesson" | "quiz" | "badge";
+  label: string;
+  at: Date;
+};
+
+function relativeTime(date: Date): string {
+  const diff = Date.now() - date.getTime();
+  const mins = Math.round(diff / 60000);
+  if (mins < 60) return `Il y a ${Math.max(1, mins)} min`;
+  const hours = Math.round(mins / 60);
+  if (hours < 24) return `Il y a ${hours} h`;
+  const days = Math.round(hours / 24);
+  if (days === 1) return "Hier";
+  if (days < 7) return `Il y a ${days} jours`;
+  const weeks = Math.round(days / 7);
+  return `Il y a ${weeks} sem.`;
+}
+
+/** Activité récente dérivée des leçons terminées et des badges obtenus. */
+export async function getRecentActivity(
+  userId: string
+): Promise<(Omit<ActivityView, "at"> & { time: string })[]> {
+  const [lessons, badges] = await Promise.all([
+    prisma.lessonProgress.findMany({
+      where: { userId, completed: true, completedAt: { not: null } },
+      orderBy: { completedAt: "desc" },
+      take: 6,
+      select: { completedAt: true, lesson: { select: { title: true, type: true } } },
+    }),
+    prisma.userBadge.findMany({
+      where: { userId },
+      orderBy: { earnedAt: "desc" },
+      take: 3,
+      select: { earnedAt: true, badge: { select: { name: true } } },
+    }),
+  ]);
+
+  const events: ActivityView[] = [
+    ...lessons.map((l) => ({
+      type: (l.lesson.type === "QUIZ" ? "quiz" : "lesson") as "quiz" | "lesson",
+      label:
+        l.lesson.type === "QUIZ"
+          ? `Quiz « ${l.lesson.title} » réussi`
+          : `Leçon « ${l.lesson.title} » terminée`,
+      at: l.completedAt as Date,
+    })),
+    ...badges.map((b) => ({
+      type: "badge" as const,
+      label: `Badge « ${b.badge.name} » obtenu`,
+      at: b.earnedAt,
+    })),
+  ];
+
+  return events
+    .sort((a, b) => b.at.getTime() - a.at.getTime())
+    .slice(0, 6)
+    .map((e) => ({ type: e.type, label: e.label, time: relativeTime(e.at) }));
+}

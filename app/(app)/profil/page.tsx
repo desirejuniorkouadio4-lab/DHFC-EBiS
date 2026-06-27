@@ -3,10 +3,12 @@ import { BadgesGallery } from "@/components/lms/dashboard-widgets";
 import { NotificationPreferences } from "@/components/lms/preferences";
 import { ProgressBar } from "@/components/lms/progress-bar";
 import { getSessionUser } from "@/lib/auth-helpers";
+import { getUserBadges } from "@/lib/lms/db";
 
 export default async function ProfilPage() {
   const CURRENT_USER = await getSessionUser();
   if (!CURRENT_USER) return null;
+  const badges = await getUserBadges(CURRENT_USER.id);
   const xpPercent = Math.round((CURRENT_USER.xp / CURRENT_USER.nextLevelXp) * 100);
 
   const infos = [
@@ -94,7 +96,7 @@ export default async function ProfilPage() {
           <Award className="h-5 w-5 text-orange-500" />
           Mes badges
         </h2>
-        <BadgesGallery />
+        <BadgesGallery badges={badges} />
       </div>
     </div>
   );

@@ -13,12 +13,15 @@ import {
   Target,
   BookOpen,
   MessageSquare,
+  GraduationCap,
+  Flame,
 } from "lucide-react";
 import { CountUp } from "@/components/motion/count-up";
 import { Rail, RailItem } from "@/components/ui/rail";
 import { DISCIPLINES } from "@/lib/data";
-import { USER_STATS, BADGES, ACTIVITY, PLANNING } from "@/lib/lms/data";
-import type { EnrollmentView } from "@/lib/lms/db";
+import { PLANNING } from "@/lib/lms/data";
+import type { EnrollmentView, UserStats, BadgeView } from "@/lib/lms/db";
+import { badgeIcon } from "@/lib/lms/icons";
 import { ProgressBar } from "@/components/lms/progress-bar";
 import { formatDate, cn } from "@/lib/utils";
 
@@ -75,10 +78,16 @@ export function ContinueCard({ enrollment }: { enrollment: EnrollmentView }) {
 /* ===========================================================
  *  Statistiques
  * =========================================================== */
-export function StatsRow() {
+export function StatsRow({ stats }: { stats: UserStats }) {
+  const items = [
+    { label: "Heures de formation", value: stats.hours, suffix: " h", icon: GraduationCap },
+    { label: "Quiz réussis", value: stats.quizPassed, suffix: "", icon: Target },
+    { label: "Jours d'affilée", value: stats.streak, suffix: "", icon: Flame },
+    { label: "Badges obtenus", value: stats.badges, suffix: "", icon: Trophy },
+  ];
   return (
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-      {USER_STATS.map((stat) => (
+      {items.map((stat) => (
         <div
           key={stat.label}
           className="flex items-center gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4"
@@ -188,32 +197,35 @@ const RARITY_RING: Record<string, string> = {
   "légendaire": "ring-green-300 dark:ring-green-500/40",
 };
 
-export function BadgesGallery() {
+export function BadgesGallery({ badges }: { badges: BadgeView[] }) {
   return (
     <div className="flex flex-wrap gap-3">
-      {BADGES.map((badge) => (
-        <div
-          key={badge.slug}
-          title={`${badge.name} — ${badge.description}`}
-          className={cn(
-            "group flex w-[88px] flex-col items-center gap-2 rounded-2xl border border-[var(--border-subtle)] p-3 text-center transition-transform hover:-translate-y-1",
-            !badge.earned && "opacity-50"
-          )}
-        >
-          <span
+      {badges.map((badge) => {
+        const Icon = badgeIcon(badge.icon);
+        return (
+          <div
+            key={badge.slug}
+            title={`${badge.name} — ${badge.description}`}
             className={cn(
-              "flex h-12 w-12 items-center justify-center rounded-full ring-2",
-              badge.earned
-                ? "bg-gradient-to-br from-orange-500 to-green-500 text-white"
-                : "bg-[var(--bg-secondary)] text-neutral-400",
-              RARITY_RING[badge.rarity]
+              "group flex w-[88px] flex-col items-center gap-2 rounded-2xl border border-[var(--border-subtle)] p-3 text-center transition-transform hover:-translate-y-1",
+              !badge.earned && "opacity-50"
             )}
           >
-            {badge.earned ? <badge.icon className="h-6 w-6" /> : <Lock className="h-5 w-5" />}
-          </span>
-          <span className="text-[11px] font-semibold leading-tight">{badge.name}</span>
-        </div>
-      ))}
+            <span
+              className={cn(
+                "flex h-12 w-12 items-center justify-center rounded-full ring-2",
+                badge.earned
+                  ? "bg-gradient-to-br from-orange-500 to-green-500 text-white"
+                  : "bg-[var(--bg-secondary)] text-neutral-400",
+                RARITY_RING[badge.rarity]
+              )}
+            >
+              {badge.earned ? <Icon className="h-6 w-6" /> : <Lock className="h-5 w-5" />}
+            </span>
+            <span className="text-[11px] font-semibold leading-tight">{badge.name}</span>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -228,10 +240,19 @@ const ACTIVITY_ICON = {
   message: MessageSquare,
 } as const;
 
-export function ActivityTimeline() {
+type ActivityItem = { type: "lesson" | "quiz" | "badge"; label: string; time: string };
+
+export function ActivityTimeline({ activity }: { activity: ActivityItem[] }) {
+  if (activity.length === 0) {
+    return (
+      <p className="px-2 py-4 text-sm text-[var(--text-secondary)]">
+        Aucune activité récente pour l'instant.
+      </p>
+    );
+  }
   return (
     <ul className="space-y-1">
-      {ACTIVITY.map((item, i) => {
+      {activity.map((item, i) => {
         const Icon = ACTIVITY_ICON[item.type];
         return (
           <li key={i} className="flex gap-3 rounded-xl px-2 py-2.5 transition-colors hover:bg-[var(--bg-secondary)]">

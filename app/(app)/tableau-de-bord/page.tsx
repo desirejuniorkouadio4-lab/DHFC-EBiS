@@ -11,14 +11,24 @@ import {
   PlanningList,
 } from "@/components/lms/dashboard-widgets";
 import { getRecommended } from "@/lib/lms/data";
-import { getMyEnrollments } from "@/lib/lms/db";
+import {
+  getMyEnrollments,
+  getUserStats,
+  getUserBadges,
+  getRecentActivity,
+} from "@/lib/lms/db";
 import { getSessionUser } from "@/lib/auth-helpers";
 
 export default async function DashboardPage() {
   const user = await getSessionUser();
   if (!user) return null;
   const recommended = getRecommended();
-  const enrollments = await getMyEnrollments(user.id);
+  const [enrollments, stats, badges, activity] = await Promise.all([
+    getMyEnrollments(user.id),
+    getUserStats(user.id),
+    getUserBadges(user.id),
+    getRecentActivity(user.id),
+  ]);
 
   return (
     <div className="space-y-10">
@@ -49,7 +59,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Statistiques */}
-      <StatsRow />
+      <StatsRow stats={stats} />
 
       {/* Mes parcours */}
       <section>
@@ -60,10 +70,10 @@ export default async function DashboardPage() {
       {/* Badges + Activité */}
       <div className="grid gap-6 lg:grid-cols-2">
         <Card title="Mes badges" icon={Trophy} href="/profil" linkLabel="Profil">
-          <BadgesGallery />
+          <BadgesGallery badges={badges} />
         </Card>
         <Card title="Activité récente" icon={ActivityIcon}>
-          <ActivityTimeline />
+          <ActivityTimeline activity={activity} />
         </Card>
       </div>
 
