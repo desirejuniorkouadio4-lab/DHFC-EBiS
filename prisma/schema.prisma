@@ -1,0 +1,217 @@
+// ============================================================
+//  DHFC-EBiS — Schéma Prisma (socle)
+//  Modèles alignés sur l'application actuelle (vitrine + LMS apprenant).
+//  D'autres modules du cahier (§8 : forums, messagerie, banque
+//  d'exercices, médias…) seront ajoutés au fil des chantiers.
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  APPRENANT
+  TUTEUR
+  ENCADREUR
+  CONCEPTEUR
+  ADMIN
+  SUPERADMIN
+}
+
+enum Level {
+  DEBUTANT
+  INTERMEDIAIRE
+  AVANCE
+}
+
+enum LessonType {
+  VIDEO
+  TEXTE
+  QUIZ
+}
+
+model Discipline {
+  id        String     @id @default(cuid())
+  slug      String     @unique
+  name      String
+  short     String
+  color     String
+  bivalence String
+  icon      String // clé d'icône (mappée vers un composant côté UI)
+  parcours  Parcours[]
+  createdAt DateTime   @default(now())
+}
+
+model User {
+  id           String           @id @default(cuid())
+  email        String           @unique
+  firstName    String
+  lastName     String
+  role         Role             @default(APPRENANT)
+  bivalence    String?
+  region       String?
+  dren         String?
+  college      String?
+  xp           Int              @default(0)
+  level        Int              @default(1)
+  streak       Int              @default(0)
+  passwordHash String?
+  enrollments  Enrollment[]
+  progress     LessonProgress[]
+  badges       UserBadge[]
+  certificates Certificate[]
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+}
+
+model Parcours {
+  id            String       @id @default(cuid())
+  slug          String       @unique
+  title         String
+  subtitle      String
+  description   String
+  disciplineId  String
+  discipline    Discipline   @relation(fields: [disciplineId], references: [id])
+  level         Level
+  durationHours Int
+  ratingAvg     Float        @default(0)
+  reviewsCount  Int          @default(0)
+  enrolledCount Int          @default(0)
+  isNew         Boolean      @default(false)
+  objectives    String[]
+  prerequisites String[]
+  tags          String[]
+  modules       Module[]
+  enrollments   Enrollment[]
+  certificates  Certificate[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([disciplineId])
+}
+
+model Module {
+  id         String   @id @default(cuid())
+  parcoursId String
+  parcours   Parcours @relation(fields: [parcoursId], references: [id], onDelete: Cascade)
+  index      Int
+  title      String
+  lessons    Lesson[]
+
+  @@unique([parcoursId, index])
+}
+
+model Lesson {
+  id          String           @id @default(cuid())
+  moduleId    String
+  module      Module           @relation(fields: [moduleId], references: [id], onDelete: Cascade)
+  index       Int
+  title       String
+  type        LessonType
+  durationMin Int
+  content     Json
+  progress    LessonProgress[]
+
+  @@unique([moduleId, index])
+}
+
+model Cohort {
+  id          String       @id @default(cuid())
+  name        String
+  enrollments Enrollment[]
+  createdAt   DateTime     @default(now())
+}
+
+model Enrollment {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parcoursId String
+  parcours   Parcours @relation(fields: [parcoursId], references: [id], onDelete: Cascade)
+  cohortId   String?
+  cohort     Cohort?  @relation(fields: [cohortId], references: [id])
+  tutorName  String?
+  progress   Int      @default(0)
+  enrolledAt DateTime @default(now())
+
+  @@unique([userId, parcoursId])
+  @@index([parcoursId])
+}
+
+model LessonProgress {
+  id          String    @id @default(cuid())
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lessonId    String
+  lesson      Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  completed   Boolean   @default(false)
+  completedAt DateTime?
+
+  @@unique([userId, lessonId])
+}
+
+model Badge {
+  id          String      @id @default(cuid())
+  slug        String      @unique
+  name        String
+  description String
+  icon        String
+  rarity      String
+  users       UserBadge[]
+}
+
+model UserBadge {
+  id       String   @id @default(cuid())
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  badgeId  String
+  badge    Badge    @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+  earnedAt DateTime @default(now())
+
+  @@unique([userId, badgeId])
+}
+
+model Certificate {
+  id         String   @id @default(cuid())
+  code       String   @unique
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  parcoursId String
+  parcours   Parcours @relation(fields: [parcoursId], references: [id])
+  score      Int
+  issuedAt   DateTime @default(now())
+}
+
+model Actualite {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  excerpt     String
+  category    String
+  publishedAt DateTime
+  readingTime Int
+}
+
+model Partenaire {
+  id      String @id @default(cuid())
+  acronym String @unique
+  name    String
+  role    String
+  order   Int    @default(0)
+}
+
+model Temoignage {
+  id       String @id @default(cuid())
+  name     String
+  role     String
+  college  String
+  quote    String @db.Text
+  initials String
+  order    Int    @default(0)
+}
