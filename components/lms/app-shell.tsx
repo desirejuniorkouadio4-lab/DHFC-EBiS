@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
+import { signOut } from "next-auth/react";
 import {
   LayoutDashboard,
   GraduationCap,
@@ -17,11 +18,12 @@ import {
   Bell,
   ChevronRight,
   User,
+  LogOut,
 } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { BottomTabBar, type TabItem } from "@/components/layout/bottom-tab-bar";
-import { CURRENT_USER } from "@/lib/lms/data";
+import type { SessionUser } from "@/lib/auth-helpers";
 import { cn } from "@/lib/utils";
 
 const MOBILE_TABS: TabItem[] = [
@@ -45,7 +47,7 @@ const NOTIFICATIONS = [
   { title: "Échéance approchante", detail: "Devoir à rendre dans 3 jours", time: "Hier" },
 ];
 
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({ user, children }: { user: SessionUser; children: React.ReactNode }) {
   const pathname = usePathname();
   const [drawerOpen, setDrawerOpen] = useState(false);
 
@@ -57,7 +59,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-[var(--bg-secondary)]">
       {/* Sidebar desktop */}
       <aside className="fixed inset-y-0 left-0 z-40 hidden w-64 flex-col border-r border-[var(--border-subtle)] bg-[var(--bg-primary)] lg:flex">
-        <SidebarContent pathname={pathname} />
+        <SidebarContent pathname={pathname} user={user} />
       </aside>
 
       {/* Drawer mobile */}
@@ -81,7 +83,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               transition={{ type: "tween", duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
               className="absolute inset-y-0 left-0 flex w-72 flex-col border-r border-[var(--border-subtle)] bg-[var(--bg-primary)]"
             >
-              <SidebarContent pathname={pathname} onClose={() => setDrawerOpen(false)} />
+              <SidebarContent pathname={pathname} user={user} onClose={() => setDrawerOpen(false)} />
             </motion.aside>
           </motion.div>
         )}
@@ -103,7 +105,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             <div className="hidden sm:block">
               <p className="text-xs text-[var(--text-secondary)]">Bonjour,</p>
               <p className="text-sm font-semibold leading-tight">
-                {CURRENT_USER.firstName} {CURRENT_USER.lastName}
+                {user.firstName} {user.lastName}
               </p>
             </div>
           </div>
@@ -111,7 +113,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="flex items-center gap-2">
             <span className="hidden items-center gap-1.5 rounded-full bg-orange-50 px-3 py-1.5 text-sm font-semibold text-orange-700 sm:inline-flex dark:bg-orange-500/10 dark:text-orange-300">
               <Flame className="h-4 w-4" />
-              {CURRENT_USER.streak} jours
+              {user.streak} jours
             </span>
             <NotificationsButton />
             <ThemeToggle />
@@ -120,7 +122,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-green-500 text-sm font-bold text-white"
               aria-label="Mon profil"
             >
-              {CURRENT_USER.initials}
+              {user.initials}
             </Link>
           </div>
         </header>
@@ -138,9 +140,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
 function SidebarContent({
   pathname,
+  user,
   onClose,
 }: {
   pathname: string;
+  user: SessionUser;
   onClose?: () => void;
 }) {
   return (
@@ -186,19 +190,27 @@ function SidebarContent({
           <ExternalLink className="h-5 w-5" />
           Retour au site
         </Link>
+        <button
+          type="button"
+          onClick={() => signOut({ callbackUrl: "/connexion" })}
+          className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-[var(--text-secondary)] transition-colors hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-500/10"
+        >
+          <LogOut className="h-5 w-5" />
+          Se déconnecter
+        </button>
         <Link
           href="/profil"
           className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-[var(--bg-secondary)]"
         >
           <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-green-500 text-xs font-bold text-white">
-            {CURRENT_USER.initials}
+            {user.initials}
           </span>
           <span className="min-w-0">
             <span className="block truncate text-sm font-semibold">
-              {CURRENT_USER.firstName} {CURRENT_USER.lastName}
+              {user.firstName} {user.lastName}
             </span>
             <span className="block truncate text-xs text-[var(--text-secondary)]">
-              {CURRENT_USER.bivalence}
+              {user.bivalence ?? user.role}
             </span>
           </span>
         </Link>

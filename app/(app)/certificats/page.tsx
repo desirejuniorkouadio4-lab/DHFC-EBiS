@@ -1,8 +1,9 @@
 import { Download, ShieldCheck, QrCode, Award, Clock } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
 import { ProgressBar } from "@/components/lms/progress-bar";
-import { CURRENT_USER, ENROLLMENTS } from "@/lib/lms/data";
+import { ENROLLMENTS } from "@/lib/lms/data";
 import { PARCOURS } from "@/lib/data";
+import { getSessionUser } from "@/lib/auth-helpers";
 import { formatDate } from "@/lib/utils";
 
 // Certificat obtenu (mock). En cible : généré à la complétion (cf. §18.1).
@@ -13,7 +14,9 @@ const EARNED = {
   score: 86,
 };
 
-export default function CertificatsPage() {
+export default async function CertificatsPage() {
+  const CURRENT_USER = await getSessionUser();
+  if (!CURRENT_USER) return null;
   const parcours = PARCOURS.find((p) => p.slug === EARNED.slug);
   const inProgress = ENROLLMENTS.filter((e) => e.slug !== EARNED.slug);
 

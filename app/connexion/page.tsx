@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ArrowLeft, Check } from "lucide-react";
 import { Logo, LogoMark } from "@/components/brand/logo";
 import { ConnexionForm } from "@/components/auth/connexion-form";
+import { auth } from "@/auth";
 
 export const metadata: Metadata = {
   title: "Connexion",
@@ -16,7 +18,9 @@ const PROOFS = [
   "Obtenez vos certificats officiels DPFC",
 ];
 
-export default function ConnexionPage() {
+export default async function ConnexionPage() {
+  const session = await auth();
+  if (session?.user) redirect("/tableau-de-bord");
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
       {/* Panneau de marque */}

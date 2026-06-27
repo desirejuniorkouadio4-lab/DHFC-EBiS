@@ -4,6 +4,7 @@
  *   pnpm/npm : `npx prisma db seed`
  */
 import { PrismaClient, Level, LessonType } from "@prisma/client";
+import bcrypt from "bcryptjs";
 import {
   DISCIPLINES,
   PARCOURS,
@@ -196,6 +197,7 @@ async function main() {
   const user = await prisma.user.create({
     data: {
       email: "konan.yao@dhfc.dpfc.ci",
+      passwordHash: await bcrypt.hash("demo1234", 10),
       firstName: "Konan",
       lastName: "Yao",
       role: "APPRENANT",

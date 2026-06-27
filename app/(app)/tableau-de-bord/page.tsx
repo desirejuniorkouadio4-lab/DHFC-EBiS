@@ -10,20 +10,22 @@ import {
   ActivityTimeline,
   PlanningList,
 } from "@/components/lms/dashboard-widgets";
-import { CURRENT_USER, getRecommended } from "@/lib/lms/data";
+import { getRecommended } from "@/lib/lms/data";
+import { getSessionUser } from "@/lib/auth-helpers";
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
   const recommended = getRecommended();
+  const user = await getSessionUser();
 
   return (
     <div className="space-y-10">
       {/* En-tête */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-          Bonjour {CURRENT_USER.firstName} 👋
+          Bonjour {user?.firstName} 👋
         </h1>
         <p className="mt-1 text-[var(--text-secondary)]">
-          Vous êtes sur une série de {CURRENT_USER.streak} jours. Continuez sur votre lancée !
+          Vous êtes sur une série de {user?.streak} jours. Continuez sur votre lancée !
         </p>
       </div>
 

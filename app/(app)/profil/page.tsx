@@ -2,9 +2,11 @@ import { MapPin, Building2, Mail, Award, Bell, Pencil, Zap } from "lucide-react"
 import { BadgesGallery } from "@/components/lms/dashboard-widgets";
 import { NotificationPreferences } from "@/components/lms/preferences";
 import { ProgressBar } from "@/components/lms/progress-bar";
-import { CURRENT_USER } from "@/lib/lms/data";
+import { getSessionUser } from "@/lib/auth-helpers";
 
-export default function ProfilPage() {
+export default async function ProfilPage() {
+  const CURRENT_USER = await getSessionUser();
+  if (!CURRENT_USER) return null;
   const xpPercent = Math.round((CURRENT_USER.xp / CURRENT_USER.nextLevelXp) * 100);
 
   const infos = [
