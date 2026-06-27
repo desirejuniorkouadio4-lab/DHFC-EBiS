@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -22,9 +22,8 @@ import {
 } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
 import { ProgressBar } from "@/components/lms/progress-bar";
-import { useProgress } from "@/components/lms/progress-store";
-import { getCurriculum, type Lesson, type LessonType } from "@/lib/lms/curriculum";
-import { PARCOURS } from "@/lib/data";
+import { toggleLessonComplete, markLessonComplete } from "@/lib/lms/actions";
+import type { Curriculum, Lesson, LessonType } from "@/lib/lms/curriculum";
 import { cn } from "@/lib/utils";
 
 const TYPE_ICON: Record<LessonType, typeof PlayCircle> = {
@@ -36,24 +35,58 @@ const TYPE_ICON: Record<LessonType, typeof PlayCircle> = {
 const TABS = ["Aperçu", "Mes notes", "Discussion", "Ressources", "Transcript"] as const;
 type Tab = (typeof TABS)[number];
 
-export function CoursePlayer({ slug, lessonId }: { slug: string; lessonId: string }) {
-  const curriculum = getCurriculum(slug);
-  const { isCompleted, markComplete, toggleComplete, setLastLesson, courseProgress } = useProgress();
+export function CoursePlayer({
+  slug,
+  lessonId,
+  curriculum,
+  initialCompleted,
+}: {
+  slug: string;
+  lessonId: string;
+  curriculum: Curriculum;
+  initialCompleted: string[];
+}) {
+  const [completed, setCompleted] = useState<Set<string>>(() => new Set(initialCompleted));
+  const [, startTransition] = useTransition();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [tab, setTab] = useState<Tab>("Aperçu");
 
-  const flat = curriculum?.flat ?? [];
+  useEffect(() => {
+    setCompleted(new Set(initialCompleted));
+  }, [initialCompleted]);
+
+  useEffect(() => {
+    setTab("Aperçu");
+  }, [lessonId]);
+
+  const flat = curriculum.flat;
   const index = flat.findIndex((l) => l.id === lessonId);
   const lesson = index >= 0 ? flat[index] : null;
   const prev = index > 0 ? flat[index - 1] : null;
   const next = index >= 0 && index < flat.length - 1 ? flat[index + 1] : null;
 
-  useEffect(() => {
-    if (lesson) setLastLesson(slug, lesson.id);
-    setTab("Aperçu");
-  }, [slug, lesson, setLastLesson]);
+  const isCompleted = (id: string) => completed.has(id);
 
-  if (!curriculum || !lesson) {
+  function toggle(id: string) {
+    setCompleted((prev) => {
+      const n = new Set(prev);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      return n;
+    });
+    startTransition(() => {
+      void toggleLessonComplete(slug, id);
+    });
+  }
+
+  function markDone(id: string) {
+    setCompleted((prev) => new Set(prev).add(id));
+    startTransition(() => {
+      void markLessonComplete(slug, id);
+    });
+  }
+
+  if (!lesson) {
     return (
       <div className="flex min-h-screen items-center justify-center p-8 text-center">
         <div>
@@ -66,8 +99,9 @@ export function CoursePlayer({ slug, lessonId }: { slug: string; lessonId: strin
     );
   }
 
-  const parcours = PARCOURS.find((p) => p.slug === slug);
-  const { percent } = courseProgress(slug);
+  const total = curriculum.totalLessons;
+  const completedCount = flat.filter((l) => completed.has(l.id)).length;
+  const percent = total ? Math.round((completedCount / total) * 100) : 0;
   const done = isCompleted(lesson.id);
 
   return (
@@ -80,7 +114,7 @@ export function CoursePlayer({ slug, lessonId }: { slug: string; lessonId: strin
           </Link>
           <LogoMark className="hidden h-8 w-auto sm:block" />
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold">{parcours?.title}</p>
+            <p className="truncate text-sm font-semibold">{curriculum.title}</p>
             <p className="truncate text-xs text-[var(--text-secondary)]">{lesson.moduleTitle}</p>
           </div>
         </div>
@@ -102,7 +136,7 @@ export function CoursePlayer({ slug, lessonId }: { slug: string; lessonId: strin
       <div className="mx-auto flex max-w-[1400px]">
         {/* Sidebar desktop */}
         <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-80 shrink-0 overflow-y-auto border-r border-[var(--border-subtle)] bg-[var(--bg-primary)] lg:block">
-          <CourseSidebar slug={slug} currentId={lesson.id} isCompleted={isCompleted} />
+          <CourseSidebar slug={slug} curriculum={curriculum} currentId={lesson.id} isCompleted={isCompleted} />
         </aside>
 
         {/* Sommaire mobile (bottom sheet) */}
@@ -132,7 +166,7 @@ export function CoursePlayer({ slug, lessonId }: { slug: string; lessonId: strin
                   </button>
                 </div>
                 <div className="min-h-0 flex-1 overflow-y-auto">
-                  <CourseSidebar slug={slug} currentId={lesson.id} isCompleted={isCompleted} />
+                  <CourseSidebar slug={slug} curriculum={curriculum} currentId={lesson.id} isCompleted={isCompleted} />
                 </div>
               </motion.aside>
             </motion.div>
@@ -142,7 +176,7 @@ export function CoursePlayer({ slug, lessonId }: { slug: string; lessonId: strin
         {/* Contenu */}
         <main className="min-w-0 flex-1 px-4 py-6 pb-28 sm:px-8 sm:py-8 lg:pb-8">
           <div className="mx-auto max-w-3xl">
-            <LessonContent lesson={lesson} onPassQuiz={() => markComplete(lesson.id, slug)} />
+            <LessonContent lesson={lesson} onPassQuiz={() => markDone(lesson.id)} />
 
             {/* Onglets */}
             <div className="mt-8">
@@ -182,7 +216,7 @@ export function CoursePlayer({ slug, lessonId }: { slug: string; lessonId: strin
 
               <button
                 type="button"
-                onClick={() => toggleComplete(lesson.id)}
+                onClick={() => toggle(lesson.id)}
                 className={cn(
                   "inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-semibold transition-colors",
                   done
@@ -197,7 +231,7 @@ export function CoursePlayer({ slug, lessonId }: { slug: string; lessonId: strin
               {next ? (
                 <Link
                   href={`/apprendre/${slug}/${next.id}`}
-                  onClick={() => markComplete(lesson.id, slug)}
+                  onClick={() => markDone(lesson.id)}
                   className="group inline-flex h-11 items-center justify-center gap-2 rounded-full bg-orange-500 px-5 text-sm font-semibold text-white transition-colors hover:bg-orange-600"
                 >
                   Suivant <ChevronRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
@@ -205,7 +239,7 @@ export function CoursePlayer({ slug, lessonId }: { slug: string; lessonId: strin
               ) : (
                 <Link
                   href="/mes-parcours"
-                  onClick={() => markComplete(lesson.id, slug)}
+                  onClick={() => markDone(lesson.id)}
                   className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-green-500 px-5 text-sm font-semibold text-white hover:bg-green-600"
                 >
                   Terminer le parcours <CheckCircle2 className="h-4 w-4" />
@@ -232,7 +266,7 @@ export function CoursePlayer({ slug, lessonId }: { slug: string; lessonId: strin
 
         <button
           type="button"
-          onClick={() => toggleComplete(lesson.id)}
+          onClick={() => toggle(lesson.id)}
           className={cn(
             "inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-full text-sm font-semibold transition-colors",
             done ? "bg-green-500 text-white" : "border border-[var(--border-subtle)] text-[var(--text-primary)]"
@@ -245,7 +279,7 @@ export function CoursePlayer({ slug, lessonId }: { slug: string; lessonId: strin
         {next ? (
           <Link
             href={`/apprendre/${slug}/${next.id}`}
-            onClick={() => markComplete(lesson.id, slug)}
+            onClick={() => markDone(lesson.id)}
             aria-label="Leçon suivante"
             className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-orange-500 text-white"
           >
@@ -254,7 +288,7 @@ export function CoursePlayer({ slug, lessonId }: { slug: string; lessonId: strin
         ) : (
           <Link
             href="/mes-parcours"
-            onClick={() => markComplete(lesson.id, slug)}
+            onClick={() => markDone(lesson.id)}
             aria-label="Terminer le parcours"
             className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-green-500 text-white"
           >
@@ -271,17 +305,18 @@ export function CoursePlayer({ slug, lessonId }: { slug: string; lessonId: strin
  * =========================================================== */
 function CourseSidebar({
   slug,
+  curriculum,
   currentId,
   isCompleted,
 }: {
   slug: string;
+  curriculum: Curriculum;
   currentId: string;
   isCompleted: (id: string) => boolean;
 }) {
-  const curriculum = getCurriculum(slug);
   return (
     <div className="p-3">
-      {curriculum?.modules.map((mod) => (
+      {curriculum.modules.map((mod) => (
         <div key={mod.index} className="mb-2">
           <p className="px-3 py-2 text-xs font-bold uppercase tracking-wider text-[var(--text-secondary)]">
             {mod.title}

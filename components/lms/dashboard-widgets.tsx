@@ -16,40 +16,18 @@ import {
 } from "lucide-react";
 import { CountUp } from "@/components/motion/count-up";
 import { Rail, RailItem } from "@/components/ui/rail";
-import { useProgress } from "@/components/lms/progress-store";
-import { DISCIPLINES, PARCOURS } from "@/lib/data";
-import {
-  ENROLLMENTS,
-  USER_STATS,
-  BADGES,
-  ACTIVITY,
-  PLANNING,
-  type Enrollment,
-} from "@/lib/lms/data";
-import { getCurriculum } from "@/lib/lms/curriculum";
+import { DISCIPLINES } from "@/lib/data";
+import { USER_STATS, BADGES, ACTIVITY, PLANNING } from "@/lib/lms/data";
+import type { EnrollmentView } from "@/lib/lms/db";
 import { ProgressBar } from "@/components/lms/progress-bar";
 import { formatDate, cn } from "@/lib/utils";
-
-/* ----- Helpers ----- */
-function useResumeTarget(enrollment: Enrollment) {
-  const { getLastLesson } = useProgress();
-  const curriculum = getCurriculum(enrollment.slug);
-  const lessonId =
-    getLastLesson(enrollment.slug) ?? enrollment.lastLessonId ?? curriculum?.flat[0]?.id ?? "";
-  const lesson = curriculum?.flat.find((l) => l.id === lessonId) ?? curriculum?.flat[0] ?? null;
-  return { lessonId: lesson?.id ?? "", lesson, curriculum };
-}
 
 /* ===========================================================
  *  Continuer où j'en étais
  * =========================================================== */
-export function ContinueCard() {
-  const enrollment = ENROLLMENTS[0];
-  const { lessonId, lesson, curriculum } = useResumeTarget(enrollment);
-  const { courseProgress } = useProgress();
-  const parcours = PARCOURS.find((p) => p.slug === enrollment.slug);
-  const discipline = DISCIPLINES.find((d) => d.slug === parcours?.disciplineSlug);
-  const { percent } = courseProgress(enrollment.slug);
+export function ContinueCard({ enrollment }: { enrollment: EnrollmentView }) {
+  const discipline = DISCIPLINES.find((d) => d.slug === enrollment.disciplineSlug);
+  const percent = enrollment.percent;
   const Icon = discipline?.icon ?? BookOpen;
 
   return (
@@ -64,9 +42,9 @@ export function ContinueCard() {
           <PlayCircle className="h-3.5 w-3.5" />
           Continuer où j'en étais
         </span>
-        <h2 className="mt-4 text-xl font-bold sm:text-2xl">{parcours?.title}</h2>
+        <h2 className="mt-4 text-xl font-bold sm:text-2xl">{enrollment.title}</h2>
         <p className="mt-1.5 text-sm text-white/70">
-          {lesson ? `${lesson.moduleTitle} · ${lesson.title}` : "Commencez votre parcours"}
+          {enrollment.currentLessonLabel || "Commencez votre parcours"}
         </p>
 
         <div className="mt-5 max-w-md">
@@ -83,7 +61,7 @@ export function ContinueCard() {
         </div>
 
         <Link
-          href={`/apprendre/${enrollment.slug}/${lessonId}`}
+          href={`/apprendre/${enrollment.slug}/${enrollment.resumeLessonId}`}
           className="group mt-6 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-white px-6 text-sm font-semibold text-neutral-950 transition-all hover:-translate-y-0.5"
         >
           Reprendre la leçon
@@ -123,13 +101,10 @@ export function StatsRow() {
 /* ===========================================================
  *  Carte de parcours suivi
  * =========================================================== */
-export function EnrolledCourseCard({ enrollment }: { enrollment: Enrollment }) {
-  const { lessonId } = useResumeTarget(enrollment);
-  const { courseProgress } = useProgress();
-  const parcours = PARCOURS.find((p) => p.slug === enrollment.slug);
-  const discipline = DISCIPLINES.find((d) => d.slug === parcours?.disciplineSlug);
+export function EnrolledCourseCard({ enrollment }: { enrollment: EnrollmentView }) {
+  const discipline = DISCIPLINES.find((d) => d.slug === enrollment.disciplineSlug);
   const Icon = discipline?.icon ?? BookOpen;
-  const { completed, total, percent } = courseProgress(enrollment.slug);
+  const { completed, total, percent } = enrollment;
   const done = percent >= 100;
 
   return (
@@ -152,7 +127,7 @@ export function EnrolledCourseCard({ enrollment }: { enrollment: Enrollment }) {
       </div>
 
       <div className="flex flex-1 flex-col p-5">
-        <h3 className="font-bold leading-snug">{parcours?.title}</h3>
+        <h3 className="font-bold leading-snug">{enrollment.title}</h3>
         <p className="mt-1 text-xs text-[var(--text-secondary)]">{enrollment.cohort}</p>
 
         <div className="mt-4">
@@ -173,7 +148,7 @@ export function EnrolledCourseCard({ enrollment }: { enrollment: Enrollment }) {
         </div>
 
         <Link
-          href={`/apprendre/${enrollment.slug}/${lessonId}`}
+          href={`/apprendre/${enrollment.slug}/${enrollment.resumeLessonId}`}
           className="group mt-5 inline-flex h-10 items-center justify-center gap-2 rounded-full bg-orange-500 text-sm font-semibold text-white transition-all hover:bg-orange-600"
         >
           {done ? "Revoir le parcours" : "Reprendre"}
@@ -184,10 +159,17 @@ export function EnrolledCourseCard({ enrollment }: { enrollment: Enrollment }) {
   );
 }
 
-export function EnrolledCoursesGrid() {
+export function EnrolledCoursesGrid({ enrollments }: { enrollments: EnrollmentView[] }) {
+  if (enrollments.length === 0) {
+    return (
+      <p className="rounded-2xl border border-dashed border-[var(--border-subtle)] p-8 text-center text-sm text-[var(--text-secondary)]">
+        Vous n'êtes inscrit à aucun parcours pour le moment.
+      </p>
+    );
+  }
   return (
     <Rail cols="lg:grid-cols-2 lg:gap-5 xl:grid-cols-3">
-      {ENROLLMENTS.map((e) => (
+      {enrollments.map((e) => (
         <RailItem key={e.slug} width="w-[82%] sm:w-[55%]">
           <EnrolledCourseCard enrollment={e} />
         </RailItem>

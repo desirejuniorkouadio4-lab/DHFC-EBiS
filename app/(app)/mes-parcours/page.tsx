@@ -2,10 +2,15 @@ import { GraduationCap } from "lucide-react";
 import { EnrolledCoursesGrid } from "@/components/lms/dashboard-widgets";
 import { ParcoursCard } from "@/components/marketing/parcours-card";
 import { Rail, RailItem } from "@/components/ui/rail";
-import { ENROLLMENTS, getRecommended } from "@/lib/lms/data";
+import { getRecommended } from "@/lib/lms/data";
+import { getMyEnrollments } from "@/lib/lms/db";
+import { getSessionUser } from "@/lib/auth-helpers";
 
-export default function MesParcoursPage() {
+export default async function MesParcoursPage() {
+  const user = await getSessionUser();
+  if (!user) return null;
   const recommended = getRecommended();
+  const enrollments = await getMyEnrollments(user.id);
 
   return (
     <div className="space-y-10">
@@ -16,12 +21,12 @@ export default function MesParcoursPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Mes parcours</h1>
           <p className="text-[var(--text-secondary)]">
-            {ENROLLMENTS.length} parcours en cours dans votre cohorte.
+            {enrollments.length} parcours en cours dans votre cohorte.
           </p>
         </div>
       </div>
 
-      <EnrolledCoursesGrid />
+      <EnrolledCoursesGrid enrollments={enrollments} />
 
       <section>
         <h2 className="mb-5 text-xl font-bold">Explorer d'autres parcours</h2>

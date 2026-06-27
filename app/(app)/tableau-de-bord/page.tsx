@@ -11,28 +11,37 @@ import {
   PlanningList,
 } from "@/components/lms/dashboard-widgets";
 import { getRecommended } from "@/lib/lms/data";
+import { getMyEnrollments } from "@/lib/lms/db";
 import { getSessionUser } from "@/lib/auth-helpers";
 
 export default async function DashboardPage() {
-  const recommended = getRecommended();
   const user = await getSessionUser();
+  if (!user) return null;
+  const recommended = getRecommended();
+  const enrollments = await getMyEnrollments(user.id);
 
   return (
     <div className="space-y-10">
       {/* En-tête */}
       <div>
         <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">
-          Bonjour {user?.firstName} 👋
+          Bonjour {user.firstName} 👋
         </h1>
         <p className="mt-1 text-[var(--text-secondary)]">
-          Vous êtes sur une série de {user?.streak} jours. Continuez sur votre lancée !
+          Vous êtes sur une série de {user.streak} jours. Continuez sur votre lancée !
         </p>
       </div>
 
       {/* Continuer + Planning */}
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <ContinueCard />
+          {enrollments[0] ? (
+            <ContinueCard enrollment={enrollments[0]} />
+          ) : (
+            <div className="flex h-full items-center justify-center rounded-3xl border border-dashed border-[var(--border-subtle)] p-8 text-center text-sm text-[var(--text-secondary)]">
+              Aucun parcours en cours pour l'instant.
+            </div>
+          )}
         </div>
         <Card title="Prochains rendez-vous" icon={CalendarClock}>
           <PlanningList />
@@ -45,7 +54,7 @@ export default async function DashboardPage() {
       {/* Mes parcours */}
       <section>
         <SectionHeader title="Mes parcours" href="/mes-parcours" linkLabel="Voir tout" />
-        <EnrolledCoursesGrid />
+        <EnrolledCoursesGrid enrollments={enrollments} />
       </section>
 
       {/* Badges + Activité */}

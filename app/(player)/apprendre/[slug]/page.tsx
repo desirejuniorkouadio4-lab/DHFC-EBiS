@@ -1,18 +1,21 @@
 import { redirect, notFound } from "next/navigation";
-import { getCurriculum } from "@/lib/lms/curriculum";
-import { getEnrollment } from "@/lib/lms/data";
+import { getResumeLessonId } from "@/lib/lms/db";
+import { getSessionUser } from "@/lib/auth-helpers";
 
-/** Redirige vers la dernière leçon connue (ou la première) du parcours. */
+export const dynamic = "force-dynamic";
+
+/** Redirige vers la première leçon non terminée du parcours (reprise). */
 export default async function ApprendreRedirect({
   params,
 }: {
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const curriculum = getCurriculum(slug);
-  if (!curriculum || curriculum.flat.length === 0) notFound();
+  const user = await getSessionUser();
+  if (!user) redirect("/connexion");
 
-  const enrollment = getEnrollment(slug);
-  const target = enrollment?.lastLessonId ?? curriculum.flat[0].id;
-  redirect(`/apprendre/${slug}/${target}`);
+  const lessonId = await getResumeLessonId(user.id, slug);
+  if (!lessonId) notFound();
+
+  redirect(`/apprendre/${slug}/${lessonId}`);
 }
