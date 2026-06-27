@@ -4,11 +4,11 @@ import { SectionHeading } from "@/components/ui/section-heading";
 import { Button } from "@/components/ui/button";
 import { Rail, RailItem } from "@/components/ui/rail";
 import { ParcoursCard } from "./parcours-card";
-import { PARCOURS } from "@/lib/data";
+import { getFeaturedParcours } from "@/lib/content";
 
 /** Section « Les parcours » sur la home — aperçu du catalogue (§9.3). */
-export function ParcoursSection() {
-  const featured = PARCOURS.slice(0, 3);
+export async function ParcoursSection() {
+  const featured = await getFeaturedParcours(3);
 
   return (
     <section className="bg-[var(--bg-secondary)] py-20 sm:py-28">

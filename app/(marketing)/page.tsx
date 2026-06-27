@@ -10,8 +10,12 @@ import { PartenairesSection } from "@/components/marketing/partenaires-section";
 import { ActualitesSection } from "@/components/marketing/actualites-section";
 import { CtaFinal } from "@/components/marketing/cta-final";
 import { JsonLd } from "@/components/seo/json-ld";
+import { getTemoignages } from "@/lib/content";
 
-export default function HomePage() {
+export const dynamic = "force-dynamic";
+
+export default async function HomePage() {
+  const temoignages = await getTemoignages();
   return (
     <>
       <JsonLd />
@@ -22,7 +26,7 @@ export default function HomePage() {
       <ParcoursSection />
       <Etapes />
       <Formats />
-      <Temoignages />
+      <Temoignages temoignages={temoignages} />
       <PartenairesSection />
       <ActualitesSection />
       <CtaFinal />

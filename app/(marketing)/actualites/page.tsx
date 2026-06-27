@@ -3,14 +3,17 @@ import { Container } from "@/components/ui/container";
 import { PageHero } from "@/components/marketing/page-hero";
 import { ActualiteCard } from "@/components/marketing/actualite-card";
 import { Stagger, RevealItem } from "@/components/motion/reveal";
-import { ACTUALITES } from "@/lib/data";
+import { getActualites } from "@/lib/content";
 
 export const metadata: Metadata = {
   title: "Actualités",
   description: "Toutes les actualités du dispositif de formation continue DHFC-EBiS.",
 };
 
-export default function ActualitesPage() {
+export const dynamic = "force-dynamic";
+
+export default async function ActualitesPage() {
+  const actualites = await getActualites();
   return (
     <>
       <PageHero
@@ -22,7 +25,7 @@ export default function ActualitesPage() {
 
       <Container className="py-10 sm:py-16">
         <Stagger className="grid gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3" staggerChildren={0.08}>
-          {ACTUALITES.map((a) => (
+          {actualites.map((a) => (
             <RevealItem key={a.slug}>
               <ActualiteCard actualite={a} />
             </RevealItem>

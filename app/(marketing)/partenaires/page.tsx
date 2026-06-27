@@ -3,7 +3,7 @@ import { Container } from "@/components/ui/container";
 import { PageHero } from "@/components/marketing/page-hero";
 import { Reveal, Stagger, RevealItem } from "@/components/motion/reveal";
 import { CtaFinal } from "@/components/marketing/cta-final";
-import { PARTENAIRES } from "@/lib/data";
+import { getPartenaires } from "@/lib/content";
 
 export const metadata: Metadata = {
   title: "Partenaires",
@@ -24,7 +24,11 @@ const GROUPS = [
   },
 ];
 
-export default function PartenairesPage() {
+export const dynamic = "force-dynamic";
+
+export default async function PartenairesPage() {
+  const partenaires = await getPartenaires();
+  const byAcronym = new Map(partenaires.map((p) => [p.acronym, p]));
   return (
     <>
       <PageHero
@@ -45,7 +49,7 @@ export default function PartenairesPage() {
             </Reveal>
             <Stagger className="mt-8 grid gap-6 sm:grid-cols-2" staggerChildren={0.1}>
               {group.acronyms.map((acr) => {
-                const p = PARTENAIRES.find((x) => x.acronym === acr);
+                const p = byAcronym.get(acr);
                 if (!p) return null;
                 return (
                   <RevealItem key={acr}>

@@ -4,10 +4,11 @@ import { SectionHeading } from "@/components/ui/section-heading";
 import { Button } from "@/components/ui/button";
 import { Rail, RailItem } from "@/components/ui/rail";
 import { ActualiteCard } from "./actualite-card";
-import { ACTUALITES } from "@/lib/data";
+import { getActualites } from "@/lib/content";
 
 /** Section « Actualités » — 3 dernières (§9.3). */
-export function ActualitesSection() {
+export async function ActualitesSection() {
+  const actualites = (await getActualites()).slice(0, 3);
   return (
     <section className="py-20 sm:py-28">
       <Container>
@@ -25,7 +26,7 @@ export function ActualitesSection() {
         </div>
 
         <Rail className="mt-12" cols="lg:grid-cols-3">
-          {ACTUALITES.map((a) => (
+          {actualites.map((a) => (
             <RailItem key={a.slug}>
               <ActualiteCard actualite={a} />
             </RailItem>

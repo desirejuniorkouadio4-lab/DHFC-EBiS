@@ -5,19 +5,20 @@ import { AnimatePresence, motion } from "framer-motion";
 import { Quote, ChevronLeft, ChevronRight } from "lucide-react";
 import { Container } from "@/components/ui/container";
 import { SectionHeading } from "@/components/ui/section-heading";
-import { TEMOIGNAGES } from "@/lib/data";
+import type { Temoignage } from "@/lib/data";
 
 /** Carousel de témoignages d'enseignants formés (§9.3). */
-export function Temoignages() {
+export function Temoignages({ temoignages }: { temoignages: Temoignage[] }) {
   const [index, setIndex] = useState(0);
   const [dir, setDir] = useState(1);
 
   function go(next: number) {
-    setDir(next > index || (index === TEMOIGNAGES.length - 1 && next === 0) ? 1 : -1);
-    setIndex((next + TEMOIGNAGES.length) % TEMOIGNAGES.length);
+    setDir(next > index || (index === temoignages.length - 1 && next === 0) ? 1 : -1);
+    setIndex((next + temoignages.length) % temoignages.length);
   }
 
-  const t = TEMOIGNAGES[index];
+  const t = temoignages[index];
+  if (!t) return null;
 
   return (
     <section className="py-20 sm:py-28">
@@ -74,7 +75,7 @@ export function Temoignages() {
             </button>
 
             <div className="flex items-center gap-2" role="tablist" aria-label="Sélection du témoignage">
-              {TEMOIGNAGES.map((item, i) => (
+              {temoignages.map((item, i) => (
                 <button
                   key={item.name}
                   type="button"

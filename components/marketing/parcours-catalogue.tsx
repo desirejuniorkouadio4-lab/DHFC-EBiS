@@ -5,18 +5,18 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import { Container } from "@/components/ui/container";
 import { ParcoursCard } from "./parcours-card";
-import { PARCOURS, DISCIPLINES } from "@/lib/data";
+import { DISCIPLINES, type Parcours } from "@/lib/data";
 
 const LEVELS = ["Débutant", "Intermédiaire", "Avancé"] as const;
 
 /** Catalogue filtrable des parcours (§11.2). */
-export function ParcoursCatalogue() {
+export function ParcoursCatalogue({ parcours }: { parcours: Parcours[] }) {
   const [query, setQuery] = useState("");
   const [discipline, setDiscipline] = useState<string | null>(null);
   const [level, setLevel] = useState<string | null>(null);
 
   const results = useMemo(() => {
-    return PARCOURS.filter((p) => {
+    return parcours.filter((p) => {
       const matchQuery =
         !query ||
         p.title.toLowerCase().includes(query.toLowerCase()) ||
@@ -26,7 +26,7 @@ export function ParcoursCatalogue() {
       const matchLevel = !level || p.level === level;
       return matchQuery && matchDiscipline && matchLevel;
     });
-  }, [query, discipline, level]);
+  }, [parcours, query, discipline, level]);
 
   const hasFilters = query || discipline || level;
 

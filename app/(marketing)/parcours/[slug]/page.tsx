@@ -21,16 +21,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/motion/reveal";
 import { ParcoursCard } from "@/components/marketing/parcours-card";
-import {
-  ProgrammeAccordion,
-  type ProgrammeModule,
-} from "@/components/marketing/programme-accordion";
-import { PARCOURS, DISCIPLINES } from "@/lib/data";
+import { ProgrammeAccordion } from "@/components/marketing/programme-accordion";
+import { DISCIPLINES } from "@/lib/data";
+import { getParcoursBySlug, getSimilarParcours } from "@/lib/content";
 import { formatNumber } from "@/lib/utils";
 
-export function generateStaticParams() {
-  return PARCOURS.map((p) => ({ slug: p.slug }));
-}
+export const dynamic = "force-dynamic";
 
 export async function generateMetadata({
   params,
@@ -38,33 +34,12 @@ export async function generateMetadata({
   params: Promise<{ slug: string }>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const parcours = PARCOURS.find((p) => p.slug === slug);
+  const parcours = await getParcoursBySlug(slug);
   if (!parcours) return { title: "Parcours introuvable" };
   return {
     title: parcours.title,
     description: parcours.description,
   };
-}
-
-/** Construit un programme de démonstration à partir du parcours. */
-function buildProgramme(modules: number): ProgrammeModule[] {
-  const themes = [
-    "Fondamentaux et cadrage",
-    "Approfondissement disciplinaire",
-    "Pédagogie et mise en situation",
-    "Évaluation et différenciation",
-    "Numérique et ressources",
-    "Projet final et bilan",
-  ];
-  return Array.from({ length: modules }, (_, i) => ({
-    title: `Module ${i + 1} — ${themes[i % themes.length]}`,
-    lessons: [
-      { title: "Vidéo d'introduction", type: "video" as const, duration: "8 min" },
-      { title: "Apports théoriques", type: "texte" as const, duration: "15 min" },
-      { title: "Étude de cas en classe", type: "texte" as const, duration: "12 min" },
-      { title: "Quiz de validation", type: "quiz" as const, duration: "10 min" },
-    ],
-  }));
 }
 
 export default async function ParcoursDetailPage({
@@ -73,17 +48,13 @@ export default async function ParcoursDetailPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const parcours = PARCOURS.find((p) => p.slug === slug);
+  const parcours = await getParcoursBySlug(slug);
   if (!parcours) notFound();
 
   const discipline = DISCIPLINES.find((d) => d.slug === parcours.disciplineSlug);
   const Icon = discipline?.icon;
-  const programme = buildProgramme(parcours.modules);
-  const similar = PARCOURS.filter(
-    (p) => p.slug !== parcours.slug && p.disciplineSlug === parcours.disciplineSlug
-  ).slice(0, 3);
-  const fallbackSimilar = PARCOURS.filter((p) => p.slug !== parcours.slug).slice(0, 3);
-  const recommended = similar.length ? similar : fallbackSimilar;
+  const programme = parcours.programme;
+  const recommended = await getSimilarParcours(slug, parcours.disciplineSlug, 3);
 
   return (
     <>

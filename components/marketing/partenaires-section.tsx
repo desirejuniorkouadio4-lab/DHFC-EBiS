@@ -1,10 +1,11 @@
 import { Container } from "@/components/ui/container";
 import { SectionHeading } from "@/components/ui/section-heading";
 import { Rail, RailItem } from "@/components/ui/rail";
-import { PARTENAIRES } from "@/lib/data";
+import { getPartenaires } from "@/lib/content";
 
 /** Section « Partenaires » avec effets au survol (§9.3). */
-export function PartenairesSection() {
+export async function PartenairesSection() {
+  const partenaires = await getPartenaires();
   return (
     <section className="bg-[var(--bg-secondary)] py-20 sm:py-28">
       <Container>
@@ -15,7 +16,7 @@ export function PartenairesSection() {
         />
 
         <Rail className="mt-14" cols="lg:grid-cols-6 lg:gap-4">
-          {PARTENAIRES.map((p) => (
+          {partenaires.map((p) => (
             <RailItem key={p.acronym} width="w-[42%] sm:w-[30%]">
               <div
                 title={p.name}
