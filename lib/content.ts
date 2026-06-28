@@ -79,18 +79,14 @@ const parcoursSelect = {
   _count: { select: { modules: true } },
 } as const;
 
-/** Compte les leçons d'un parcours (somme sur ses modules). */
-async function countLessons(parcoursSlug: string): Promise<number> {
-  return prisma.lesson.count({ where: { module: { parcours: { slug: parcoursSlug } } } });
-}
-
 export async function getAllParcours(): Promise<Parcours[]> {
   const rows = await prisma.parcours.findMany({
     where: { published: true },
-    select: parcoursSelect,
+    // Compte des leçons agrégé en une seule requête (évite un N+1 qui saturait le pool).
+    select: { ...parcoursSelect, modules: { select: { _count: { select: { lessons: true } } } } },
     orderBy: [{ isNew: "desc" }, { enrolledCount: "desc" }],
   });
-  return Promise.all(rows.map(async (r) => toParcours(r, await countLessons(r.slug))));
+  return rows.map((r) => toParcours(r, r.modules.reduce((acc, m) => acc + m._count.lessons, 0)));
 }
 
 export async function getFeaturedParcours(limit = 3): Promise<Parcours[]> {

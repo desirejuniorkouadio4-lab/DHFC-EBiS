@@ -98,6 +98,7 @@ async function main() {
   console.log("🌱 Seed DHFC-EBiS…");
 
   // --- Nettoyage (ordre des dépendances) ---
+  await prisma.submission.deleteMany();
   await prisma.lessonProgress.deleteMany();
   await prisma.enrollment.deleteMany();
   await prisma.userBadge.deleteMany();

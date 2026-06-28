@@ -1,9 +1,17 @@
 "use client";
 
-import { CheckCircle2, XCircle, ArrowUp, ArrowDown } from "lucide-react";
+import { CheckCircle2, XCircle, ArrowUp, ArrowDown, Clock, Award } from "lucide-react";
 import type { Exercice } from "@/lib/exercices/types";
 import type { GradeResult } from "@/lib/exercices/grade";
 import { cn } from "@/lib/utils";
+
+export type SubmissionView = {
+  answer: string;
+  status: "PENDING" | "GRADED";
+  score: number | null;
+  maxScore: number;
+  feedback: string | null;
+};
 
 type PlayerProps<T extends Exercice = Exercice> = {
   exercice: T;
@@ -11,6 +19,7 @@ type PlayerProps<T extends Exercice = Exercice> = {
   onChange: (a: unknown) => void;
   submitted: boolean;
   result?: GradeResult;
+  submission?: SubmissionView;
 };
 
 /** Player d'exercice (apprenant) — dispatcher par type, feedback instantané. */
@@ -33,6 +42,8 @@ export function ExercicePlayer(props: PlayerProps) {
       return <AppariementPlayer {...props} exercice={exercice} />;
     case "CALCUL":
       return <CalculPlayer {...props} exercice={exercice} />;
+    case "REPONSE_LONGUE":
+      return <ReponseLonguePlayer {...props} exercice={exercice} />;
   }
 }
 
@@ -279,6 +290,67 @@ function AppariementPlayer({ exercice, answer, onChange, submitted }: PlayerProp
             .join(" · ")}
         </p>
       )}
+    </div>
+  );
+}
+
+function ReponseLonguePlayer({ exercice, answer, onChange, submitted, submission }: PlayerProps<Extract<Exercice, { type: "REPONSE_LONGUE" }>>) {
+  const text = typeof answer === "string" ? answer : "";
+  const displayedAnswer = submission?.answer ?? text;
+  const words = displayedAnswer.trim() ? displayedAnswer.trim().split(/\s+/).length : 0;
+
+  // Déjà corrigée par le tuteur.
+  if (submission?.status === "GRADED") {
+    return (
+      <div className="space-y-3">
+        <div className="whitespace-pre-wrap rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-3 text-sm">
+          {submission.answer}
+        </div>
+        <div className="rounded-xl border border-green-400 bg-green-50 p-4 dark:bg-green-500/10">
+          <p className="flex items-center gap-2 font-bold text-green-700 dark:text-green-300">
+            <Award className="h-4 w-4" /> Corrigé : {submission.score}/{submission.maxScore}
+          </p>
+          {submission.feedback && (
+            <p className="mt-2 whitespace-pre-wrap text-sm text-[var(--text-secondary)]">{submission.feedback}</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Soumise et en attente de correction (depuis la base, ou à l'instant).
+  if (submission?.status === "PENDING" || (submitted && text.trim())) {
+    return (
+      <div className="space-y-2">
+        <div className="whitespace-pre-wrap rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] p-3 text-sm">
+          {displayedAnswer}
+        </div>
+        <p className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
+          <Clock className="h-3.5 w-3.5" /> Envoyée au tuteur — en attente de correction
+        </p>
+      </div>
+    );
+  }
+
+  // Saisie.
+  const min = exercice.data.minWords;
+  const max = exercice.data.maxWords;
+  return (
+    <div>
+      <textarea
+        value={text}
+        disabled={submitted}
+        onChange={(e) => onChange(e.target.value)}
+        rows={6}
+        placeholder="Rédigez votre réponse…"
+        className="w-full resize-y rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-3.5 text-sm outline-none transition-colors focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20"
+      />
+      <p className="mt-1.5 text-xs text-[var(--text-secondary)]">
+        {words} mot{words > 1 ? "s" : ""}
+        {min > 0 && ` · minimum ${min}`}
+        {max > 0 && ` · maximum ${max}`}
+        {" · corrigé par le tuteur"}
+      </p>
     </div>
   );
 }

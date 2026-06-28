@@ -1,13 +1,14 @@
 import Link from "next/link";
-import { Users, GraduationCap, TrendingUp, AlertTriangle, ArrowRight, Inbox } from "lucide-react";
+import { Users, GraduationCap, TrendingUp, AlertTriangle, ArrowRight, Inbox, ClipboardCheck } from "lucide-react";
 import { requireRole } from "@/lib/auth-helpers";
 import { getTutorCohorts } from "@/lib/tuteur/db";
+import { getPendingCount } from "@/lib/tuteur/corrections";
 
 export const dynamic = "force-dynamic";
 
 export default async function TuteurPage() {
   const actor = await requireRole(["TUTEUR", "ENCADREUR", "ADMIN", "SUPERADMIN"]);
-  const cohorts = await getTutorCohorts(actor);
+  const [cohorts, pendingCorrections] = await Promise.all([getTutorCohorts(actor), getPendingCount(actor)]);
 
   const totalLearners = cohorts.reduce((a, c) => a + c.learnerCount, 0);
   const totalWatch = cohorts.reduce((a, c) => a + c.toWatch, 0);
@@ -31,6 +32,30 @@ export default async function TuteurPage() {
         <Stat icon={GraduationCap} label="Cohortes" value={cohorts.length} />
         <Stat icon={AlertTriangle} label="À suivre" value={totalWatch} tone="amber" />
       </div>
+
+      {/* Accès à la file de correction */}
+      <Link
+        href="/tuteur/corrections"
+        className="group flex items-center gap-4 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-5 transition-colors hover:border-orange-300"
+      >
+        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-orange-50 text-orange-600 dark:bg-orange-500/10">
+          <ClipboardCheck className="h-6 w-6" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="font-bold group-hover:text-orange-600">File de correction</p>
+          <p className="text-sm text-[var(--text-secondary)]">
+            {pendingCorrections > 0
+              ? `${pendingCorrections} réponse${pendingCorrections > 1 ? "s" : ""} en attente de correction`
+              : "Aucune copie en attente"}
+          </p>
+        </div>
+        {pendingCorrections > 0 && (
+          <span className="flex h-7 min-w-7 items-center justify-center rounded-full bg-orange-500 px-2 text-sm font-bold text-white">
+            {pendingCorrections}
+          </span>
+        )}
+        <ArrowRight className="h-5 w-5 shrink-0 text-[var(--text-secondary)] transition-transform group-hover:translate-x-0.5" />
+      </Link>
 
       {cohorts.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-[var(--border-subtle)] p-12 text-center">

@@ -1,4 +1,4 @@
-import { normalizeText, type Exercice } from "./types";
+import { isManualType, normalizeText, type Exercice } from "./types";
 
 export type GradeResult = {
   /** Score normalisé entre 0 et 1. */
@@ -95,6 +95,10 @@ export function gradeExercice(ex: Exercice, answer: unknown): GradeResult {
       const ok = Math.abs(num - ex.correctAnswer) <= (ex.data.tolerance || 0);
       return { score: ok ? 1 : 0, correct: ok };
     }
+
+    case "REPONSE_LONGUE":
+      // Correction manuelle par le tuteur : non auto-corrigé.
+      return { score: 0, correct: false };
   }
 }
 
@@ -107,6 +111,8 @@ export function gradeQuiz(
   let earned = 0;
   let total = 0;
   for (const ex of exercices) {
+    // Les exercices à correction manuelle ne comptent pas dans le score auto.
+    if (isManualType(ex.type)) continue;
     const r = gradeExercice(ex, answers[ex.id]);
     results[ex.id] = r;
     earned += r.score * (ex.points || 1);

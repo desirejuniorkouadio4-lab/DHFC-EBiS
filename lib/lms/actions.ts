@@ -50,6 +50,45 @@ export async function toggleLessonComplete(slug: string, lessonId: string) {
   return { ok: true, completed: nowCompleted };
 }
 
+/**
+ * Persiste les réponses longues d'une leçon (file de correction tuteur).
+ * N'écrase jamais une soumission déjà existante (préserve une correction).
+ */
+export async function submitEssays(
+  slug: string,
+  lessonId: string,
+  essays: { exerciceId: string; prompt: string; answer: string }[]
+) {
+  const session = await auth();
+  if (!session?.user?.id) return { ok: false };
+  const userId = session.user.id;
+
+  // Cohorte de l'apprenant pour ce parcours (pour router la correction au bon tuteur).
+  const enrollment = await prisma.enrollment.findFirst({
+    where: { userId, parcours: { slug } },
+    select: { cohortId: true },
+  });
+
+  for (const e of essays) {
+    if (!e.answer.trim()) continue;
+    await prisma.submission.upsert({
+      where: { userId_lessonId_exerciceId: { userId, lessonId, exerciceId: e.exerciceId } },
+      update: {}, // ne pas écraser une soumission existante (ni sa correction)
+      create: {
+        userId,
+        lessonId,
+        exerciceId: e.exerciceId,
+        prompt: e.prompt.slice(0, 1000),
+        answer: e.answer,
+        cohortId: enrollment?.cohortId ?? null,
+        status: "PENDING",
+      },
+    });
+  }
+  revalidatePath(`/apprendre/${slug}`, "layout");
+  return { ok: true };
+}
+
 /** Marque une leçon comme terminée (idempotent) — utilisé sur « Suivant ». */
 export async function markLessonComplete(slug: string, lessonId: string) {
   const session = await auth();

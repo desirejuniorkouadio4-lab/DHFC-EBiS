@@ -67,6 +67,8 @@ model User {
   badges         UserBadge[]
   certificates   Certificate[]
   tutoredCohorts Cohort[]         @relation("TutorCohorts")
+  submissions    Submission[]     @relation("UserSubmissions")
+  gradedSubmissions Submission[]  @relation("GradedSubmissions")
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 }
@@ -119,6 +121,7 @@ model Lesson {
   durationMin Int
   content     Json
   progress    LessonProgress[]
+  submissions Submission[]
 
   @@unique([moduleId, index])
 }
@@ -129,6 +132,7 @@ model Cohort {
   tutorId     String?
   tutor       User?        @relation("TutorCohorts", fields: [tutorId], references: [id])
   enrollments Enrollment[]
+  submissions Submission[]
   createdAt   DateTime     @default(now())
 
   @@index([tutorId])
@@ -192,6 +196,39 @@ model Certificate {
   parcours   Parcours @relation(fields: [parcoursId], references: [id])
   score      Int
   issuedAt   DateTime @default(now())
+}
+
+enum SubmissionStatus {
+  PENDING
+  GRADED
+}
+
+// Réponse à un exercice à correction manuelle (réponse longue, devoir…).
+model Submission {
+  id         String           @id @default(cuid())
+  userId     String
+  user       User             @relation("UserSubmissions", fields: [userId], references: [id], onDelete: Cascade)
+  lessonId   String
+  lesson     Lesson           @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+  exerciceId String // id de l'exercice dans le contenu du quiz
+  prompt     String // copie de l'énoncé au moment de la soumission
+  answer     String           @db.Text
+  status     SubmissionStatus @default(PENDING)
+  score      Int? // note attribuée (sur maxScore)
+  maxScore   Int              @default(20)
+  feedback   String?          @db.Text
+  cohortId   String?
+  cohort     Cohort?          @relation(fields: [cohortId], references: [id])
+  gradedById String?
+  gradedBy   User?            @relation("GradedSubmissions", fields: [gradedById], references: [id])
+  gradedAt   DateTime?
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+
+  @@unique([userId, lessonId, exerciceId])
+  @@index([status])
+  @@index([cohortId])
+  @@index([lessonId])
 }
 
 model Actualite {

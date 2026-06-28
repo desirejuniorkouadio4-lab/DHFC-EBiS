@@ -60,6 +60,30 @@ export async function getCurriculumDB(slug: string): Promise<Curriculum | null> 
   return { slug, title: parcours.title, modules, flat, totalLessons: flat.length };
 }
 
+export type SubmissionView = {
+  answer: string;
+  status: "PENDING" | "GRADED";
+  score: number | null;
+  maxScore: number;
+  feedback: string | null;
+};
+
+/** Soumissions (réponses longues) de l'apprenant pour une leçon, indexées par exerciceId. */
+export async function getMySubmissionsForLesson(
+  userId: string,
+  lessonId: string
+): Promise<Record<string, SubmissionView>> {
+  const rows = await prisma.submission.findMany({
+    where: { userId, lessonId },
+    select: { exerciceId: true, answer: true, status: true, score: true, maxScore: true, feedback: true },
+  });
+  const map: Record<string, SubmissionView> = {};
+  for (const r of rows) {
+    map[r.exerciceId] = { answer: r.answer, status: r.status, score: r.score, maxScore: r.maxScore, feedback: r.feedback };
+  }
+  return map;
+}
+
 /** Ids des leçons terminées par un utilisateur pour un parcours donné. */
 export async function getCompletedLessonIds(userId: string, slug: string): Promise<string[]> {
   const rows = await prisma.lessonProgress.findMany({

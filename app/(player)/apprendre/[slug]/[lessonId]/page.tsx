@@ -1,6 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { CoursePlayer } from "@/components/lms/course-player";
-import { getCurriculumDB, getCompletedLessonIds } from "@/lib/lms/db";
+import { getCurriculumDB, getCompletedLessonIds, getMySubmissionsForLesson } from "@/lib/lms/db";
 import { getSessionUser } from "@/lib/auth-helpers";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +17,10 @@ export default async function LessonPage({
   const curriculum = await getCurriculumDB(slug);
   if (!curriculum) notFound();
 
-  const completed = await getCompletedLessonIds(user.id, slug);
+  const [completed, submissions] = await Promise.all([
+    getCompletedLessonIds(user.id, slug),
+    getMySubmissionsForLesson(user.id, lessonId),
+  ]);
 
   return (
     <CoursePlayer
@@ -25,6 +28,7 @@ export default async function LessonPage({
       lessonId={lessonId}
       curriculum={curriculum}
       initialCompleted={completed}
+      submissions={submissions}
     />
   );
 }

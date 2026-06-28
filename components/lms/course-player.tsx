@@ -22,11 +22,11 @@ import {
 } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
 import { ProgressBar } from "@/components/lms/progress-bar";
-import { toggleLessonComplete, markLessonComplete } from "@/lib/lms/actions";
+import { toggleLessonComplete, markLessonComplete, submitEssays } from "@/lib/lms/actions";
 import type { Curriculum, Lesson, LessonType } from "@/lib/lms/curriculum";
-import { ExercicePlayer } from "@/components/exercices/player";
+import { ExercicePlayer, type SubmissionView } from "@/components/exercices/player";
 import { normalizeQuizContent } from "@/lib/exercices/legacy";
-import { emptyAnswer, type Exercice } from "@/lib/exercices/types";
+import { emptyAnswer, isManualType, type Exercice } from "@/lib/exercices/types";
 import { gradeQuiz } from "@/lib/exercices/grade";
 import { cn } from "@/lib/utils";
 
@@ -44,11 +44,13 @@ export function CoursePlayer({
   lessonId,
   curriculum,
   initialCompleted,
+  submissions = {},
 }: {
   slug: string;
   lessonId: string;
   curriculum: Curriculum;
   initialCompleted: string[];
+  submissions?: Record<string, SubmissionView>;
 }) {
   const [completed, setCompleted] = useState<Set<string>>(() => new Set(initialCompleted));
   const [, startTransition] = useTransition();
@@ -180,7 +182,7 @@ export function CoursePlayer({
         {/* Contenu */}
         <main className="min-w-0 flex-1 px-4 py-6 pb-28 sm:px-8 sm:py-8 lg:pb-8">
           <div className="mx-auto max-w-3xl">
-            <LessonContent lesson={lesson} onPassQuiz={() => markDone(lesson.id)} />
+            <LessonContent lesson={lesson} onPassQuiz={() => markDone(lesson.id)} slug={slug} submissions={submissions} />
 
             {/* Onglets */}
             <div className="mt-8">
@@ -369,7 +371,17 @@ function CourseSidebar({
 /* ===========================================================
  *  Contenu de la leçon (selon le type)
  * =========================================================== */
-function LessonContent({ lesson, onPassQuiz }: { lesson: Lesson; onPassQuiz: () => void }) {
+function LessonContent({
+  lesson,
+  onPassQuiz,
+  slug,
+  submissions,
+}: {
+  lesson: Lesson;
+  onPassQuiz: () => void;
+  slug: string;
+  submissions: Record<string, SubmissionView>;
+}) {
   return (
     <div>
       <span className="text-xs font-semibold uppercase tracking-wider text-orange-600">
@@ -380,7 +392,9 @@ function LessonContent({ lesson, onPassQuiz }: { lesson: Lesson; onPassQuiz: () 
       <div className="mt-6">
         {lesson.content.kind === "video" && <VideoView lesson={lesson} />}
         {lesson.content.kind === "texte" && <TexteView lesson={lesson} />}
-        {lesson.content.kind === "quiz" && <QuizView lesson={lesson} onPass={onPassQuiz} />}
+        {lesson.content.kind === "quiz" && (
+          <QuizView lesson={lesson} onPass={onPassQuiz} slug={slug} lessonId={lesson.id} submissions={submissions} />
+        )}
       </div>
     </div>
   );
@@ -448,15 +462,30 @@ function TexteView({ lesson }: { lesson: Lesson }) {
   );
 }
 
-function QuizView({ lesson, onPass }: { lesson: Lesson; onPass: () => void }) {
+function QuizView({
+  lesson,
+  onPass,
+  slug,
+  lessonId,
+  submissions,
+}: {
+  lesson: Lesson;
+  onPass: () => void;
+  slug: string;
+  lessonId: string;
+  submissions: Record<string, SubmissionView>;
+}) {
   const [quiz] = useState(() => normalizeQuizContent(lesson.content));
   const initAnswers = () => {
     const init: Record<string, unknown> = {};
-    for (const ex of quiz.exercices) init[ex.id] = emptyAnswer(ex);
+    for (const ex of quiz.exercices) {
+      init[ex.id] = isManualType(ex.type) && submissions[ex.id] ? submissions[ex.id].answer : emptyAnswer(ex);
+    }
     return init;
   };
   const [answers, setAnswers] = useState<Record<string, unknown>>(initAnswers);
   const [submitted, setSubmitted] = useState(false);
+  const [pending, startTransition] = useTransition();
 
   if (quiz.exercices.length === 0) {
     return (
@@ -469,13 +498,26 @@ function QuizView({ lesson, onPass }: { lesson: Lesson; onPass: () => void }) {
     );
   }
 
+  const hasAuto = quiz.exercices.some((e) => !isManualType(e.type));
+  // Quelque chose reste-t-il à soumettre ? (auto = rejouable ; manuel = si pas déjà soumis)
+  const hasPendingAction = quiz.exercices.some((e) => !isManualType(e.type) || !submissions[e.id]);
   const graded = submitted ? gradeQuiz(quiz.exercices, answers) : null;
   const passed = graded ? graded.percent >= quiz.passScore : false;
 
   function submit() {
+    // Persiste les réponses longues non encore soumises.
+    const essays = quiz.exercices
+      .filter((ex) => isManualType(ex.type) && !submissions[ex.id])
+      .map((ex) => ({ exerciceId: ex.id, prompt: ex.prompt, answer: String(answers[ex.id] ?? "") }))
+      .filter((e) => e.answer.trim());
+    if (essays.length) {
+      startTransition(() => {
+        void submitEssays(slug, lessonId, essays);
+      });
+    }
     setSubmitted(true);
     const g = gradeQuiz(quiz.exercices, answers);
-    if (g.percent >= quiz.passScore) onPass();
+    if (!hasAuto || g.percent >= quiz.passScore) onPass();
   }
 
   return (
@@ -506,9 +548,10 @@ function QuizView({ lesson, onPass }: { lesson: Lesson; onPass: () => void }) {
                   onChange={(a) => setAnswers((prev) => ({ ...prev, [ex.id]: a }))}
                   submitted={submitted}
                   result={res}
+                  submission={submissions[ex.id]}
                 />
               </div>
-              {submitted && ex.feedback && (
+              {submitted && res && ex.feedback && (
                 <p className="mt-3 rounded-lg bg-[var(--bg-secondary)] px-3 py-2 text-sm text-[var(--text-secondary)]">
                   {ex.feedback}
                 </p>
@@ -518,14 +561,27 @@ function QuizView({ lesson, onPass }: { lesson: Lesson; onPass: () => void }) {
         })}
       </div>
 
-      {!submitted ? (
+      {!submitted && hasPendingAction ? (
         <button
           type="button"
           onClick={submit}
-          className="mt-6 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-orange-500 px-6 text-sm font-semibold text-white transition-colors hover:bg-orange-600"
+          disabled={pending}
+          className="mt-6 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-orange-500 px-6 text-sm font-semibold text-white transition-colors hover:bg-orange-600 disabled:opacity-60"
         >
           Valider mes réponses
         </button>
+      ) : !submitted ? null : !hasAuto ? (
+        <div className="mt-6 flex items-center gap-4 rounded-2xl border border-green-500/30 bg-green-50 p-5 dark:bg-green-500/10">
+          <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-green-500 text-white">
+            <CheckCircle2 className="h-6 w-6" />
+          </span>
+          <div className="min-w-0">
+            <p className="font-bold">Réponse envoyée</p>
+            <p className="text-sm text-[var(--text-secondary)]">
+              Votre travail a été transmis au tuteur pour correction.
+            </p>
+          </div>
+        </div>
       ) : (
         <div
           className={cn(

@@ -180,6 +180,8 @@ function ExerciceConfig({ ex, onUpdate }: { ex: Exercice; onUpdate: (e: Exercice
       return <AppariementConfig ex={ex} onUpdate={onUpdate} />;
     case "CALCUL":
       return <CalculConfig ex={ex} onUpdate={onUpdate} />;
+    case "REPONSE_LONGUE":
+      return <ReponseLongueConfig ex={ex} onUpdate={onUpdate} />;
   }
 }
 
@@ -459,6 +461,48 @@ function CalculConfig({ ex, onUpdate }: Cfg<Extract<Exercice, { type: "CALCUL" }
       <div className="space-y-1">
         <label className="text-xs font-medium text-[var(--text-secondary)]">Unité (optionnel)</label>
         <input value={ex.data.unit ?? ""} onChange={(e) => onUpdate({ ...ex, data: { ...ex.data, unit: e.target.value || null } })} placeholder="m, kg, °C…" className={cn(inputClass, "w-28")} />
+      </div>
+    </div>
+  );
+}
+
+function ReponseLongueConfig({ ex, onUpdate }: Cfg<Extract<Exercice, { type: "REPONSE_LONGUE" }>>) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
+        Correction manuelle : cette réponse sera envoyée au tuteur pour notation.
+      </div>
+      <div className="flex flex-wrap items-end gap-4">
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-[var(--text-secondary)]">Mots min. (0 = libre)</label>
+          <input
+            type="number"
+            min={0}
+            value={ex.data.minWords}
+            onChange={(e) => onUpdate({ ...ex, data: { ...ex.data, minWords: Math.max(0, Number(e.target.value) || 0) } })}
+            className={cn(inputClass, "w-28")}
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-[var(--text-secondary)]">Mots max. (0 = libre)</label>
+          <input
+            type="number"
+            min={0}
+            value={ex.data.maxWords}
+            onChange={(e) => onUpdate({ ...ex, data: { ...ex.data, maxWords: Math.max(0, Number(e.target.value) || 0) } })}
+            className={cn(inputClass, "w-28")}
+          />
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        <label className="text-xs font-medium text-[var(--text-secondary)]">Grille de notation (visible par le tuteur)</label>
+        <textarea
+          value={ex.data.rubric}
+          onChange={(e) => onUpdate({ ...ex, data: { ...ex.data, rubric: e.target.value } })}
+          rows={3}
+          placeholder="Critères attendus : exactitude scientifique, clarté, exemples de classe…"
+          className="w-full resize-y rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-3 text-sm outline-none focus:border-orange-500"
+        />
       </div>
     </div>
   );

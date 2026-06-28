@@ -13,9 +13,16 @@ export const EXERCICE_TYPES = [
   "ORDONNANCEMENT",
   "APPARIEMENT",
   "CALCUL",
+  "REPONSE_LONGUE",
 ] as const;
 
 export type ExerciceType = (typeof EXERCICE_TYPES)[number];
+
+/** Types corrigés manuellement par le tuteur (pas d'auto-correction). */
+export const MANUAL_TYPES: ExerciceType[] = ["REPONSE_LONGUE"];
+export function isManualType(type: ExerciceType): boolean {
+  return MANUAL_TYPES.includes(type);
+}
 
 export type Option = { id: string; text: string };
 export type OrderItem = { id: string; text: string };
@@ -35,7 +42,8 @@ export type Exercice =
     })
   | (Base & { type: "ORDONNANCEMENT"; data: { items: OrderItem[] }; correctAnswer: string[] })
   | (Base & { type: "APPARIEMENT"; data: { leftItems: Option[]; rightItems: Option[] }; correctAnswer: Record<string, string> })
-  | (Base & { type: "CALCUL"; data: { tolerance: number; unit: string | null }; correctAnswer: number });
+  | (Base & { type: "CALCUL"; data: { tolerance: number; unit: string | null }; correctAnswer: number })
+  | (Base & { type: "REPONSE_LONGUE"; data: { minWords: number; maxWords: number; rubric: string } });
 
 export type QuizContent = {
   kind: "quiz";
@@ -54,6 +62,7 @@ export type AnswerByType = {
   ORDONNANCEMENT: string[];
   APPARIEMENT: Record<string, string>;
   CALCUL: string;
+  REPONSE_LONGUE: string;
 };
 
 export const TYPE_LABEL: Record<ExerciceType, string> = {
@@ -65,6 +74,7 @@ export const TYPE_LABEL: Record<ExerciceType, string> = {
   ORDONNANCEMENT: "Ordonnancement",
   APPARIEMENT: "Appariement",
   CALCUL: "Calcul",
+  REPONSE_LONGUE: "Réponse longue",
 };
 
 export const TYPE_HINT: Record<ExerciceType, string> = {
@@ -76,6 +86,7 @@ export const TYPE_HINT: Record<ExerciceType, string> = {
   ORDONNANCEMENT: "Remettre des éléments dans le bon ordre.",
   APPARIEMENT: "Relier chaque élément de gauche au bon élément de droite.",
   CALCUL: "Résultat numérique avec tolérance.",
+  REPONSE_LONGUE: "Texte développé, corrigé manuellement par le tuteur.",
 };
 
 let counter = 0;
@@ -141,6 +152,8 @@ export function createExercice(type: ExerciceType): Exercice {
       };
     case "CALCUL":
       return { ...base, type, data: { tolerance: 0, unit: null }, correctAnswer: 0 };
+    case "REPONSE_LONGUE":
+      return { ...base, type, data: { minWords: 0, maxWords: 0, rubric: "" } };
   }
 }
 
@@ -155,6 +168,7 @@ export function emptyAnswer(ex: Exercice): unknown {
       return null;
     case "REPONSE_COURTE":
     case "CALCUL":
+    case "REPONSE_LONGUE":
       return "";
     case "TEXTE_A_TROUS":
       return {};
