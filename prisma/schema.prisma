@@ -62,12 +62,13 @@ model User {
   level        Int              @default(1)
   streak       Int              @default(0)
   passwordHash String?
-  enrollments  Enrollment[]
-  progress     LessonProgress[]
-  badges       UserBadge[]
-  certificates Certificate[]
-  createdAt    DateTime         @default(now())
-  updatedAt    DateTime         @updatedAt
+  enrollments    Enrollment[]
+  progress       LessonProgress[]
+  badges         UserBadge[]
+  certificates   Certificate[]
+  tutoredCohorts Cohort[]         @relation("TutorCohorts")
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
 }
 
 model Parcours {
@@ -125,8 +126,12 @@ model Lesson {
 model Cohort {
   id          String       @id @default(cuid())
   name        String
+  tutorId     String?
+  tutor       User?        @relation("TutorCohorts", fields: [tutorId], references: [id])
   enrollments Enrollment[]
   createdAt   DateTime     @default(now())
+
+  @@index([tutorId])
 }
 
 model Enrollment {

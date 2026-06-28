@@ -192,66 +192,72 @@ async function main() {
     await prisma.temoignage.create({ data: { name: t.name, role: t.role, college: t.college, quote: t.quote, initials: t.initials, order: i } });
   }
 
-  // --- Cohorte + apprenant de démo + inscriptions + progression ---
-  const cohort = await prisma.cohort.create({ data: { name: "Cohorte Mars 2026 — PC/SVT" } });
-  const user = await prisma.user.create({
-    data: {
-      email: "konan.yao@dhfc.dpfc.ci",
-      passwordHash: await bcrypt.hash("demo1234", 10),
-      firstName: "Konan",
-      lastName: "Yao",
-      role: "APPRENANT",
-      bivalence: "PC · SVT",
-      region: "Gôh",
-      dren: "DREN de Daloa",
-      college: "Collège Moderne de Daloa",
-      xp: 1240,
-      level: 5,
-      streak: 6,
-    },
-  });
-
-  // Comptes de démonstration pour chaque rôle (mot de passe : demo1234)
+  // --- Comptes staff (créés d'abord : le tuteur est rattaché aux cohortes) ---
   const staffPassword = await bcrypt.hash("demo1234", 10);
-  const staff = [
+  const staffData = [
     { email: "tuteur@dhfc.dpfc.ci", firstName: "Fatou", lastName: "Diabaté", role: "TUTEUR" as const },
     { email: "concepteur@dhfc.dpfc.ci", firstName: "Awa", lastName: "Touré", role: "CONCEPTEUR" as const },
     { email: "encadreur@dhfc.dpfc.ci", firstName: "Seydou", lastName: "Koné", role: "ENCADREUR" as const },
     { email: "admin@dhfc.dpfc.ci", firstName: "Admin", lastName: "DPFC", role: "ADMIN" as const },
   ];
-  for (const s of staff) {
-    await prisma.user.create({
-      data: {
-        ...s,
-        passwordHash: staffPassword,
-        bivalence: "PC · SVT",
-        region: "Abidjan",
-        dren: "DREN Abidjan 2",
-        college: "DPFC — Plateau",
-      },
+  let tutorId = "";
+  for (const s of staffData) {
+    const u = await prisma.user.create({
+      data: { ...s, passwordHash: staffPassword, bivalence: "PC · SVT", region: "Abidjan", dren: "DREN Abidjan 2", college: "DPFC — Plateau" },
     });
+    if (s.role === "TUTEUR") tutorId = u.id;
   }
+  const TUTOR_NAME = "Fatou Diabaté";
 
-  // Badges obtenus (5 premiers)
-  const earnedBadges = await prisma.badge.findMany({ where: { slug: { in: ["premier-pas", "streak-7", "quiz-parfait", "entraide", "diplome"] } } });
-  for (const b of earnedBadges) {
-    await prisma.userBadge.create({ data: { userId: user.id, badgeId: b.id } });
-  }
+  // --- Cohortes (tuteur attitré : Fatou Diabaté) ---
+  const cohortPCSVT = await prisma.cohort.create({ data: { name: "Cohorte Mars 2026 — PC/SVT", tutorId } });
+  const cohortTransversal = await prisma.cohort.create({ data: { name: "Cohorte Mars 2026 — Transversal", tutorId } });
 
-  for (const e of ENROLLMENTS) {
-    const parcours = await prisma.parcours.findUnique({ where: { slug: e.slug } });
-    if (!parcours) continue;
+  // Inscrit un apprenant à un parcours + génère sa progression (date de dernière activité).
+  async function enrollLearner(userId: string, slug: string, cohortId: string, baseline: number, lastActiveDaysAgo: number) {
+    const parcours = await prisma.parcours.findUnique({ where: { slug } });
+    if (!parcours) return;
     await prisma.enrollment.create({
-      data: { userId: user.id, parcoursId: parcours.id, cohortId: cohort.id, tutorName: e.tutor, progress: e.baseline },
+      data: { userId, parcoursId: parcours.id, cohortId, tutorName: TUTOR_NAME, progress: baseline },
     });
-    // Progression : marque les N premières leçons comme terminées
-    const ids = lessonsBySlug[e.slug] ?? [];
-    const count = Math.round((e.baseline / 100) * ids.length);
+    const ids = lessonsBySlug[slug] ?? [];
+    const count = Math.round((baseline / 100) * ids.length);
+    const when = new Date(Date.now() - lastActiveDaysAgo * 86400000);
     for (let i = 0; i < count; i++) {
       await prisma.lessonProgress.create({
-        data: { userId: user.id, lessonId: ids[i], completed: true, completedAt: new Date() },
+        data: { userId, lessonId: ids[i], completed: true, completedAt: when },
       });
     }
+  }
+
+  // --- Apprenant de démo (Konan Yao) ---
+  const user = await prisma.user.create({
+    data: { email: "konan.yao@dhfc.dpfc.ci", passwordHash: await bcrypt.hash("demo1234", 10), firstName: "Konan", lastName: "Yao", role: "APPRENANT", bivalence: "PC · SVT", region: "Gôh", dren: "DREN de Daloa", college: "Collège Moderne de Daloa", xp: 1240, level: 5, streak: 6 },
+  });
+  const earnedBadges = await prisma.badge.findMany({ where: { slug: { in: ["premier-pas", "streak-7", "quiz-parfait", "entraide", "diplome"] } } });
+  for (const b of earnedBadges) await prisma.userBadge.create({ data: { userId: user.id, badgeId: b.id } });
+  await enrollLearner(user.id, "experimentation-physique-chimie", cohortPCSVT.id, 45, 0);
+  await enrollLearner(user.id, "vivant-environnement-svt", cohortPCSVT.id, 80, 0);
+  await enrollLearner(user.id, "evaluer-par-competences", cohortTransversal.id, 15, 1);
+
+  // --- Cohortes garnies : autres apprenants pour le suivi tuteur ---
+  const learners = [
+    { first: "Aya", last: "Koffi", college: "Collège Moderne de Bouaké", region: "Gbêkê", slug: "experimentation-physique-chimie", cohort: cohortPCSVT.id, baseline: 62, days: 1 },
+    { first: "Ibrahim", last: "Traoré", college: "Lycée Moderne de Korhogo", region: "Poro", slug: "experimentation-physique-chimie", cohort: cohortPCSVT.id, baseline: 100, days: 2 },
+    { first: "Mariam", last: "Bamba", college: "Collège Moderne de Man", region: "Tonkpi", slug: "vivant-environnement-svt", cohort: cohortPCSVT.id, baseline: 30, days: 12 },
+    { first: "Yao", last: "N'Guessan", college: "Lycée Municipal de Yamoussoukro", region: "Bélier", slug: "vivant-environnement-svt", cohort: cohortPCSVT.id, baseline: 8, days: 21 },
+    { first: "Fatoumata", last: "Cissé", college: "Collège Moderne de San-Pédro", region: "San-Pédro", slug: "experimentation-physique-chimie", cohort: cohortPCSVT.id, baseline: 54, days: 3 },
+    { first: "Kouadio", last: "Brou", college: "Lycée Moderne de Gagnoa", region: "Gôh", slug: "evaluer-par-competences", cohort: cohortTransversal.id, baseline: 90, days: 0 },
+    { first: "Awa", last: "Sylla", college: "Collège Moderne d'Abengourou", region: "Indénié-Djuablin", slug: "evaluer-par-competences", cohort: cohortTransversal.id, baseline: 40, days: 9 },
+    { first: "Seydou", last: "Ouattara", college: "Lycée Moderne de Daloa", region: "Haut-Sassandra", slug: "evaluer-par-competences", cohort: cohortTransversal.id, baseline: 5, days: 30 },
+    { first: "Adjoua", last: "Kouamé", college: "Collège Moderne de Divo", region: "Lôh-Djiboua", slug: "experimentation-physique-chimie", cohort: cohortPCSVT.id, baseline: 72, days: 4 },
+  ];
+  let learnerSeq = 1;
+  for (const l of learners) {
+    const lu = await prisma.user.create({
+      data: { email: `apprenant${learnerSeq++}@dhfc.dpfc.ci`, passwordHash: staffPassword, firstName: l.first, lastName: l.last, role: "APPRENANT", bivalence: "PC · SVT", region: l.region, dren: `DREN — ${l.region}`, college: l.college, xp: l.baseline * 12, level: 1 + Math.floor(l.baseline / 25), streak: l.days <= 1 ? 4 : 0 },
+    });
+    await enrollLearner(lu.id, l.slug, l.cohort, l.baseline, l.days);
   }
 
   // --- Récap ---
