@@ -84,6 +84,7 @@ model Parcours {
   reviewsCount  Int          @default(0)
   enrolledCount Int          @default(0)
   isNew         Boolean      @default(false)
+  published     Boolean      @default(true)
   objectives    String[]
   prerequisites String[]
   tags          String[]

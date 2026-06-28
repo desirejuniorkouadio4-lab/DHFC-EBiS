@@ -1,0 +1,449 @@
+"use client";
+
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { Plus, Trash2, Check, Loader2, PlayCircle, FileText, Target } from "lucide-react";
+import type { LessonType } from "@prisma/client";
+import { updateLesson, type LessonContentInput } from "@/lib/concepteur/actions";
+import { cn } from "@/lib/utils";
+
+const inputClass =
+  "h-11 w-full rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3.5 text-sm outline-none transition-colors focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20";
+const textareaClass =
+  "w-full resize-y rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-3.5 text-sm outline-none transition-colors focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20";
+const labelClass = "text-sm font-medium";
+
+type Section = { heading: string; bodyText: string };
+type Chapter = { time: string; label: string };
+type Question = { question: string; optionsText: string; correct: number };
+
+type Content = Record<string, unknown>;
+
+function asContent(value: unknown): Content {
+  return value && typeof value === "object" ? (value as Content) : {};
+}
+
+/** Éditeur de leçon : métadonnées + contenu selon le type. */
+export function LessonEditor({
+  lessonId,
+  initialTitle,
+  initialType,
+  initialDuration,
+  initialContent,
+  backHref,
+}: {
+  lessonId: string;
+  initialTitle: string;
+  initialType: LessonType;
+  initialDuration: number;
+  initialContent: unknown;
+  backHref: string;
+}) {
+  const router = useRouter();
+  const [pending, startTransition] = useTransition();
+  const c = asContent(initialContent);
+
+  const [title, setTitle] = useState(initialTitle);
+  const [type, setType] = useState<LessonType>(initialType);
+  const [duration, setDuration] = useState(initialDuration);
+
+  // Lecture (texte)
+  const [sections, setSections] = useState<Section[]>(() => {
+    const arr = Array.isArray(c.sections) ? (c.sections as { heading?: string; body?: string[] }[]) : [];
+    return arr.length
+      ? arr.map((s) => ({ heading: s.heading ?? "", bodyText: (s.body ?? []).join("\n\n") }))
+      : [{ heading: "Introduction", bodyText: "" }];
+  });
+
+  // Vidéo
+  const [videoIntro, setVideoIntro] = useState(typeof c.intro === "string" && c.kind === "video" ? c.intro : "");
+  const [transcript, setTranscript] = useState(typeof c.transcript === "string" ? c.transcript : "");
+  const [chapters, setChapters] = useState<Chapter[]>(() => {
+    const arr = Array.isArray(c.chapters) ? (c.chapters as { time?: string; label?: string }[]) : [];
+    return arr.map((ch) => ({ time: ch.time ?? "", label: ch.label ?? "" }));
+  });
+
+  // Quiz
+  const [quizIntro, setQuizIntro] = useState(typeof c.intro === "string" && c.kind === "quiz" ? c.intro : "");
+  const [questions, setQuestions] = useState<Question[]>(() => {
+    const arr = Array.isArray(c.questions) ? (c.questions as { question?: string; options?: string[]; correct?: number }[]) : [];
+    return arr.map((q) => ({
+      question: q.question ?? "",
+      optionsText: (q.options ?? []).join("\n"),
+      correct: typeof q.correct === "number" ? q.correct : 0,
+    }));
+  });
+
+  function buildContent(): LessonContentInput {
+    if (type === "VIDEO") {
+      return {
+        kind: "video",
+        intro: videoIntro.trim(),
+        chapters: chapters.filter((ch) => ch.time.trim() || ch.label.trim()),
+        transcript: transcript.trim(),
+      };
+    }
+    if (type === "QUIZ") {
+      return {
+        kind: "quiz",
+        intro: quizIntro.trim(),
+        questions: questions
+          .map((q) => {
+            const options = q.optionsText.split("\n").map((o) => o.trim()).filter(Boolean);
+            return {
+              question: q.question.trim(),
+              options,
+              correct: Math.min(Math.max(0, q.correct), Math.max(0, options.length - 1)),
+            };
+          })
+          .filter((q) => q.question && q.options.length >= 2),
+      };
+    }
+    return {
+      kind: "texte",
+      sections: sections.map((s) => ({
+        heading: s.heading.trim() || "Section",
+        body: s.bodyText.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean),
+      })),
+    };
+  }
+
+  function save() {
+    if (!title.trim()) return;
+    const content = buildContent();
+    startTransition(async () => {
+      await updateLesson(lessonId, { title: title.trim(), type, durationMin: duration, content });
+    });
+  }
+
+  return (
+    <div className="mt-6 space-y-6">
+      {/* Métadonnées de la leçon */}
+      <section className="rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-6">
+        <div className="space-y-1.5">
+          <label htmlFor="lesson-title" className={labelClass}>
+            Titre de la leçon <span className="text-orange-600">*</span>
+          </label>
+          <input
+            id="lesson-title"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className={inputClass}
+          />
+        </div>
+
+        <div className="mt-5 space-y-2">
+          <span className={labelClass}>Type de contenu</span>
+          <div className="grid grid-cols-3 gap-2">
+            {(
+              [
+                { value: "TEXTE", label: "Lecture", icon: FileText },
+                { value: "VIDEO", label: "Vidéo", icon: PlayCircle },
+                { value: "QUIZ", label: "Quiz", icon: Target },
+              ] as const
+            ).map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => setType(opt.value)}
+                className={cn(
+                  "flex items-center justify-center gap-2 rounded-xl border px-3 py-2.5 text-sm font-semibold transition-colors",
+                  type === opt.value
+                    ? "border-orange-500 bg-orange-50 text-orange-700 dark:bg-orange-500/10 dark:text-orange-300"
+                    : "border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-orange-300"
+                )}
+              >
+                <opt.icon className="h-4 w-4" /> {opt.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-5 max-w-[12rem] space-y-1.5">
+          <label htmlFor="lesson-duration" className={labelClass}>
+            Durée (minutes)
+          </label>
+          <input
+            id="lesson-duration"
+            type="number"
+            min={1}
+            value={duration}
+            onChange={(e) => setDuration(Number(e.target.value) || 1)}
+            className={inputClass}
+          />
+        </div>
+      </section>
+
+      {/* Contenu selon le type */}
+      <section className="rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-6">
+        <h2 className="mb-4 font-bold">Contenu</h2>
+
+        {type === "TEXTE" && (
+          <TexteEditor sections={sections} setSections={setSections} />
+        )}
+        {type === "VIDEO" && (
+          <VideoEditor
+            intro={videoIntro}
+            setIntro={setVideoIntro}
+            transcript={transcript}
+            setTranscript={setTranscript}
+            chapters={chapters}
+            setChapters={setChapters}
+          />
+        )}
+        {type === "QUIZ" && (
+          <QuizEditor intro={quizIntro} setIntro={setQuizIntro} questions={questions} setQuestions={setQuestions} />
+        )}
+      </section>
+
+      {/* Actions */}
+      <div className="flex items-center justify-end gap-3">
+        <button
+          type="button"
+          onClick={() => router.push(backHref)}
+          className="inline-flex h-11 items-center rounded-full px-4 text-sm font-semibold text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+        >
+          Annuler
+        </button>
+        <button
+          type="button"
+          onClick={save}
+          disabled={pending || !title.trim()}
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-orange-500 px-6 text-sm font-semibold text-white shadow-brand transition-colors hover:bg-orange-600 disabled:opacity-60"
+        >
+          {pending ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" /> Enregistrement…
+            </>
+          ) : (
+            <>
+              <Check className="h-4 w-4" /> Enregistrer la leçon
+            </>
+          )}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Lecture ---------------- */
+function TexteEditor({
+  sections,
+  setSections,
+}: {
+  sections: Section[];
+  setSections: React.Dispatch<React.SetStateAction<Section[]>>;
+}) {
+  return (
+    <div className="space-y-4">
+      {sections.map((s, i) => (
+        <div key={i} className="rounded-2xl border border-[var(--border-subtle)] p-4">
+          <div className="flex items-center gap-2">
+            <input
+              value={s.heading}
+              onChange={(e) =>
+                setSections((arr) => arr.map((x, j) => (j === i ? { ...x, heading: e.target.value } : x)))
+              }
+              placeholder="Titre de la section"
+              className={inputClass}
+            />
+            <button
+              type="button"
+              onClick={() => setSections((arr) => arr.filter((_, j) => j !== i))}
+              aria-label="Supprimer la section"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[var(--border-subtle)] text-[var(--text-secondary)] transition-colors hover:border-red-300 hover:text-red-600"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+          <textarea
+            value={s.bodyText}
+            onChange={(e) =>
+              setSections((arr) => arr.map((x, j) => (j === i ? { ...x, bodyText: e.target.value } : x)))
+            }
+            rows={4}
+            placeholder="Contenu de la section (séparez les paragraphes par une ligne vide)."
+            className={cn(textareaClass, "mt-2")}
+          />
+        </div>
+      ))}
+      <button
+        type="button"
+        onClick={() => setSections((arr) => [...arr, { heading: "", bodyText: "" }])}
+        className="inline-flex h-10 items-center gap-2 rounded-full border border-dashed border-[var(--border-subtle)] px-4 text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:border-orange-400 hover:text-orange-600"
+      >
+        <Plus className="h-4 w-4" /> Ajouter une section
+      </button>
+    </div>
+  );
+}
+
+/* ---------------- Vidéo ---------------- */
+function VideoEditor({
+  intro,
+  setIntro,
+  transcript,
+  setTranscript,
+  chapters,
+  setChapters,
+}: {
+  intro: string;
+  setIntro: (v: string) => void;
+  transcript: string;
+  setTranscript: (v: string) => void;
+  chapters: Chapter[];
+  setChapters: React.Dispatch<React.SetStateAction<Chapter[]>>;
+}) {
+  return (
+    <div className="space-y-5">
+      <div className="space-y-1.5">
+        <label className={labelClass}>Introduction</label>
+        <textarea
+          value={intro}
+          onChange={(e) => setIntro(e.target.value)}
+          rows={3}
+          placeholder="Présentation de la séquence vidéo."
+          className={textareaClass}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <span className={labelClass}>Chapitres</span>
+        {chapters.map((ch, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <input
+              value={ch.time}
+              onChange={(e) => setChapters((arr) => arr.map((x, j) => (j === i ? { ...x, time: e.target.value } : x)))}
+              placeholder="00:00"
+              className="h-10 w-24 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 text-sm outline-none focus:border-orange-500"
+            />
+            <input
+              value={ch.label}
+              onChange={(e) => setChapters((arr) => arr.map((x, j) => (j === i ? { ...x, label: e.target.value } : x)))}
+              placeholder="Intitulé du chapitre"
+              className="h-10 min-w-0 flex-1 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 text-sm outline-none focus:border-orange-500"
+            />
+            <button
+              type="button"
+              onClick={() => setChapters((arr) => arr.filter((_, j) => j !== i))}
+              aria-label="Supprimer le chapitre"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[var(--border-subtle)] text-[var(--text-secondary)] transition-colors hover:border-red-300 hover:text-red-600"
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          </div>
+        ))}
+        <button
+          type="button"
+          onClick={() => setChapters((arr) => [...arr, { time: "", label: "" }])}
+          className="inline-flex h-10 items-center gap-2 rounded-full border border-dashed border-[var(--border-subtle)] px-4 text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:border-orange-400 hover:text-orange-600"
+        >
+          <Plus className="h-4 w-4" /> Ajouter un chapitre
+        </button>
+      </div>
+
+      <div className="space-y-1.5">
+        <label className={labelClass}>Transcription</label>
+        <textarea
+          value={transcript}
+          onChange={(e) => setTranscript(e.target.value)}
+          rows={3}
+          placeholder="Transcription textuelle de la vidéo (accessibilité)."
+          className={textareaClass}
+        />
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- Quiz ---------------- */
+function QuizEditor({
+  intro,
+  setIntro,
+  questions,
+  setQuestions,
+}: {
+  intro: string;
+  setIntro: (v: string) => void;
+  questions: Question[];
+  setQuestions: React.Dispatch<React.SetStateAction<Question[]>>;
+}) {
+  return (
+    <div className="space-y-5">
+      <div className="space-y-1.5">
+        <label className={labelClass}>Consigne</label>
+        <textarea
+          value={intro}
+          onChange={(e) => setIntro(e.target.value)}
+          rows={2}
+          placeholder="Validez vos acquis sur ce module."
+          className={textareaClass}
+        />
+      </div>
+
+      {questions.map((q, i) => {
+        const options = q.optionsText.split("\n").map((o) => o.trim()).filter(Boolean);
+        return (
+          <div key={i} className="rounded-2xl border border-[var(--border-subtle)] p-4">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-semibold">Question {i + 1}</span>
+              <button
+                type="button"
+                onClick={() => setQuestions((arr) => arr.filter((_, j) => j !== i))}
+                aria-label="Supprimer la question"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border-subtle)] text-[var(--text-secondary)] transition-colors hover:border-red-300 hover:text-red-600"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+            <input
+              value={q.question}
+              onChange={(e) => setQuestions((arr) => arr.map((x, j) => (j === i ? { ...x, question: e.target.value } : x)))}
+              placeholder="Énoncé de la question"
+              className={cn(inputClass, "mt-3")}
+            />
+            <div className="mt-3 space-y-1.5">
+              <label className="text-xs font-medium text-[var(--text-secondary)]">
+                Réponses (une par ligne)
+              </label>
+              <textarea
+                value={q.optionsText}
+                onChange={(e) => setQuestions((arr) => arr.map((x, j) => (j === i ? { ...x, optionsText: e.target.value } : x)))}
+                rows={4}
+                placeholder={"Première réponse\nDeuxième réponse\nTroisième réponse"}
+                className={textareaClass}
+              />
+            </div>
+            <div className="mt-3 flex items-center gap-2">
+              <label className="text-xs font-medium text-[var(--text-secondary)]">Bonne réponse :</label>
+              <select
+                value={q.correct}
+                onChange={(e) => setQuestions((arr) => arr.map((x, j) => (j === i ? { ...x, correct: Number(e.target.value) } : x)))}
+                disabled={options.length === 0}
+                className="h-9 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-2 text-sm outline-none focus:border-orange-500 disabled:opacity-50"
+              >
+                {options.length === 0 ? (
+                  <option value={0}>—</option>
+                ) : (
+                  options.map((opt, oi) => (
+                    <option key={oi} value={oi}>
+                      {opt.length > 40 ? opt.slice(0, 40) + "…" : opt}
+                    </option>
+                  ))
+                )}
+              </select>
+            </div>
+          </div>
+        );
+      })}
+
+      <button
+        type="button"
+        onClick={() => setQuestions((arr) => [...arr, { question: "", optionsText: "", correct: 0 }])}
+        className="inline-flex h-10 items-center gap-2 rounded-full border border-dashed border-[var(--border-subtle)] px-4 text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:border-orange-400 hover:text-orange-600"
+      >
+        <Plus className="h-4 w-4" /> Ajouter une question
+      </button>
+    </div>
+  );
+}

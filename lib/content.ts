@@ -86,6 +86,7 @@ async function countLessons(parcoursSlug: string): Promise<number> {
 
 export async function getAllParcours(): Promise<Parcours[]> {
   const rows = await prisma.parcours.findMany({
+    where: { published: true },
     select: parcoursSelect,
     orderBy: [{ isNew: "desc" }, { enrolledCount: "desc" }],
   });
@@ -100,8 +101,8 @@ export async function getFeaturedParcours(limit = 3): Promise<Parcours[]> {
 export type ParcoursDetail = Parcours & { programme: ProgrammeModule[] };
 
 export async function getParcoursBySlug(slug: string): Promise<ParcoursDetail | null> {
-  const p = await prisma.parcours.findUnique({
-    where: { slug },
+  const p = await prisma.parcours.findFirst({
+    where: { slug, published: true },
     select: {
       ...parcoursSelect,
       modules: {
