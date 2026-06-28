@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/lms/app-shell";
-import { getSessionUser } from "@/lib/auth-helpers";
+import { requireRole, isProfileComplete } from "@/lib/auth-helpers";
 
 export const metadata: Metadata = {
   title: "Espace apprenant",
@@ -9,8 +9,8 @@ export const metadata: Metadata = {
 };
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const user = await getSessionUser();
-  if (!user) redirect("/connexion");
+  const user = await requireRole(["APPRENANT"]);
+  if (!isProfileComplete(user)) redirect("/onboarding");
 
   return <AppShell user={user}>{children}</AppShell>;
 }

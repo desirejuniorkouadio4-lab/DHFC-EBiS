@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { redirect } from "next/navigation";
-import { getSessionUser } from "@/lib/auth-helpers";
+import { requireRole } from "@/lib/auth-helpers";
 
 export const metadata: Metadata = {
   title: "Lecture",
@@ -8,8 +7,6 @@ export const metadata: Metadata = {
 };
 
 export default async function PlayerLayout({ children }: { children: React.ReactNode }) {
-  const user = await getSessionUser();
-  if (!user) redirect("/connexion");
-
+  await requireRole(["APPRENANT"]);
   return <>{children}</>;
 }

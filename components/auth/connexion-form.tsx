@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Sparkles, Loader2, AlertCircle } from "lucide-react";
+import { roleHomePath } from "@/lib/rbac";
 
 type Mode = "password" | "magic";
 
@@ -35,7 +36,11 @@ export function ConnexionForm() {
       setError("E-mail ou mot de passe incorrect.");
       return;
     }
-    router.push("/tableau-de-bord");
+    // Redirige vers l'espace correspondant au rôle de l'utilisateur.
+    const session = await fetch("/api/auth/session")
+      .then((r) => r.json())
+      .catch(() => null);
+    router.push(roleHomePath(session?.user?.role));
     router.refresh();
   }
 

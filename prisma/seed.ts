@@ -211,6 +211,27 @@ async function main() {
     },
   });
 
+  // Comptes de démonstration pour chaque rôle (mot de passe : demo1234)
+  const staffPassword = await bcrypt.hash("demo1234", 10);
+  const staff = [
+    { email: "tuteur@dhfc.dpfc.ci", firstName: "Fatou", lastName: "Diabaté", role: "TUTEUR" as const },
+    { email: "concepteur@dhfc.dpfc.ci", firstName: "Awa", lastName: "Touré", role: "CONCEPTEUR" as const },
+    { email: "encadreur@dhfc.dpfc.ci", firstName: "Seydou", lastName: "Koné", role: "ENCADREUR" as const },
+    { email: "admin@dhfc.dpfc.ci", firstName: "Admin", lastName: "DPFC", role: "ADMIN" as const },
+  ];
+  for (const s of staff) {
+    await prisma.user.create({
+      data: {
+        ...s,
+        passwordHash: staffPassword,
+        bivalence: "PC · SVT",
+        region: "Abidjan",
+        dren: "DREN Abidjan 2",
+        college: "DPFC — Plateau",
+      },
+    });
+  }
+
   // Badges obtenus (5 premiers)
   const earnedBadges = await prisma.badge.findMany({ where: { slug: { in: ["premier-pas", "streak-7", "quiz-parfait", "entraide", "diplome"] } } });
   for (const b of earnedBadges) {

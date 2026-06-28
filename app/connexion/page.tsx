@@ -5,6 +5,7 @@ import { ArrowLeft, Check } from "lucide-react";
 import { Logo, LogoMark } from "@/components/brand/logo";
 import { ConnexionForm } from "@/components/auth/connexion-form";
 import { auth } from "@/auth";
+import { roleHomePath } from "@/lib/rbac";
 
 export const metadata: Metadata = {
   title: "Connexion",
@@ -20,7 +21,7 @@ const PROOFS = [
 
 export default async function ConnexionPage() {
   const session = await auth();
-  if (session?.user) redirect("/tableau-de-bord");
+  if (session?.user) redirect(roleHomePath(session.user.role));
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
       {/* Panneau de marque */}

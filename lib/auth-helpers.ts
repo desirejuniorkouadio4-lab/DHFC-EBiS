@@ -1,5 +1,7 @@
+import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { roleHomePath } from "@/lib/rbac";
 
 export type SessionUser = {
   id: string;
@@ -46,4 +48,27 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     nextLevelXp: 1500,
     streak: u.streak,
   };
+}
+
+/** Profil considéré complet quand les champs d'onboarding sont renseignés. */
+export function isProfileComplete(user: SessionUser): boolean {
+  return Boolean(user.bivalence && user.region && user.dren && user.college);
+}
+
+/** Exige une session ; redirige vers /connexion sinon. */
+export async function requireUser(): Promise<SessionUser> {
+  const user = await getSessionUser();
+  if (!user) redirect("/connexion");
+  return user;
+}
+
+/**
+ * Exige une session ET un rôle autorisé.
+ * Redirige vers /connexion (non connecté) ou vers l'espace du rôle (non autorisé).
+ */
+export async function requireRole(allowed: string[]): Promise<SessionUser> {
+  const user = await getSessionUser();
+  if (!user) redirect("/connexion");
+  if (!allowed.includes(user.role)) redirect(roleHomePath(user.role));
+  return user;
 }
