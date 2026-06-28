@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth-helpers";
 import type { Level, LessonType } from "@prisma/client";
+import type { QuizContent } from "@/lib/exercices/types";
 
 /** Garde commune : seuls concepteur/admin accèdent à ces mutations. */
 async function guard() {
@@ -45,7 +46,7 @@ const VALID_TYPES: LessonType[] = ["VIDEO", "TEXTE", "QUIZ"];
 
 function defaultContent(type: LessonType) {
   if (type === "VIDEO") return { kind: "video", intro: "", chapters: [], transcript: "" };
-  if (type === "QUIZ") return { kind: "quiz", intro: "", questions: [] };
+  if (type === "QUIZ") return { kind: "quiz", intro: "", passScore: 60, exercices: [] };
   return { kind: "texte", sections: [{ heading: "Introduction", body: [""] }] };
 }
 
@@ -281,7 +282,7 @@ export async function moveLesson(lessonId: string, dir: "up" | "down"): Promise<
 export type LessonContentInput =
   | { kind: "video"; intro: string; chapters: { time: string; label: string }[]; transcript: string }
   | { kind: "texte"; sections: { heading: string; body: string[] }[] }
-  | { kind: "quiz"; intro: string; questions: { question: string; options: string[]; correct: number }[] };
+  | QuizContent;
 
 export async function updateLesson(
   lessonId: string,

@@ -24,6 +24,10 @@ import { LogoMark } from "@/components/brand/logo";
 import { ProgressBar } from "@/components/lms/progress-bar";
 import { toggleLessonComplete, markLessonComplete } from "@/lib/lms/actions";
 import type { Curriculum, Lesson, LessonType } from "@/lib/lms/curriculum";
+import { ExercicePlayer } from "@/components/exercices/player";
+import { normalizeQuizContent } from "@/lib/exercices/legacy";
+import { emptyAnswer, type Exercice } from "@/lib/exercices/types";
+import { gradeQuiz } from "@/lib/exercices/grade";
 import { cn } from "@/lib/utils";
 
 const TYPE_ICON: Record<LessonType, typeof PlayCircle> = {
@@ -445,71 +449,80 @@ function TexteView({ lesson }: { lesson: Lesson }) {
 }
 
 function QuizView({ lesson, onPass }: { lesson: Lesson; onPass: () => void }) {
-  const [answers, setAnswers] = useState<Record<number, number>>({});
+  const [quiz] = useState(() => normalizeQuizContent(lesson.content));
+  const initAnswers = () => {
+    const init: Record<string, unknown> = {};
+    for (const ex of quiz.exercices) init[ex.id] = emptyAnswer(ex);
+    return init;
+  };
+  const [answers, setAnswers] = useState<Record<string, unknown>>(initAnswers);
   const [submitted, setSubmitted] = useState(false);
 
-  if (lesson.content.kind !== "quiz") return null;
-  const questions = lesson.content.questions;
-  const score = questions.reduce((acc, q, i) => acc + (answers[i] === q.correct ? 1 : 0), 0);
-  const percent = Math.round((score / questions.length) * 100);
-  const passed = percent >= 60;
+  if (quiz.exercices.length === 0) {
+    return (
+      <div className="rounded-2xl border border-dashed border-[var(--border-subtle)] p-8 text-center">
+        <p className="text-sm font-semibold">Exercice en préparation</p>
+        <p className="mt-1 text-sm text-[var(--text-secondary)]">
+          Le concepteur n'a pas encore ajouté de questions à cette évaluation.
+        </p>
+      </div>
+    );
+  }
+
+  const graded = submitted ? gradeQuiz(quiz.exercices, answers) : null;
+  const passed = graded ? graded.percent >= quiz.passScore : false;
 
   function submit() {
     setSubmitted(true);
-    if (passed) onPass();
+    const g = gradeQuiz(quiz.exercices, answers);
+    if (g.percent >= quiz.passScore) onPass();
   }
 
   return (
     <div>
-      <p className="leading-relaxed text-[var(--text-secondary)]">{lesson.content.intro}</p>
+      {quiz.intro && <p className="leading-relaxed text-[var(--text-secondary)]">{quiz.intro}</p>}
 
       <div className="mt-6 space-y-6">
-        {questions.map((q, qi) => (
-          <fieldset key={qi} className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-5">
-            <legend className="px-1 text-sm font-semibold">
-              Question {qi + 1} — {q.question}
-            </legend>
-            <div className="mt-3 space-y-2">
-              {q.options.map((opt, oi) => {
-                const selected = answers[qi] === oi;
-                const isCorrect = oi === q.correct;
-                const showState = submitted && (selected || isCorrect);
-                return (
-                  <label
-                    key={oi}
-                    className={cn(
-                      "flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-sm transition-colors",
-                      !submitted && selected && "border-orange-400 bg-orange-50 dark:bg-orange-500/10",
-                      !submitted && !selected && "border-[var(--border-subtle)] hover:border-orange-300",
-                      showState && isCorrect && "border-green-400 bg-green-50 dark:bg-green-500/10",
-                      submitted && selected && !isCorrect && "border-red-400 bg-red-50 dark:bg-red-500/10",
-                      submitted && !selected && !isCorrect && "border-[var(--border-subtle)] opacity-70"
-                    )}
-                  >
-                    <input
-                      type="radio"
-                      name={`q-${qi}`}
-                      checked={selected}
-                      disabled={submitted}
-                      onChange={() => setAnswers((a) => ({ ...a, [qi]: oi }))}
-                      className="h-4 w-4 accent-orange-500"
-                    />
-                    <span className="flex-1">{opt}</span>
-                    {showState && isCorrect && <CheckCircle2 className="h-4 w-4 text-green-500" />}
-                  </label>
-                );
-              })}
-            </div>
-          </fieldset>
-        ))}
+        {quiz.exercices.map((ex: Exercice, qi) => {
+          const res = graded?.results[ex.id];
+          return (
+            <fieldset key={ex.id} className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-5">
+              <legend className="flex items-center gap-2 px-1 text-sm font-semibold">
+                <span>
+                  Question {qi + 1} — {ex.prompt}
+                </span>
+                {submitted && res && (
+                  res.correct ? (
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  ) : (
+                    <Target className="h-4 w-4 text-orange-500" />
+                  )
+                )}
+              </legend>
+              <div className="mt-3">
+                <ExercicePlayer
+                  exercice={ex}
+                  answer={answers[ex.id]}
+                  onChange={(a) => setAnswers((prev) => ({ ...prev, [ex.id]: a }))}
+                  submitted={submitted}
+                  result={res}
+                />
+              </div>
+              {submitted && ex.feedback && (
+                <p className="mt-3 rounded-lg bg-[var(--bg-secondary)] px-3 py-2 text-sm text-[var(--text-secondary)]">
+                  {ex.feedback}
+                </p>
+              )}
+            </fieldset>
+          );
+        })}
       </div>
 
       {!submitted ? (
         <button
           type="button"
           onClick={submit}
-          disabled={Object.keys(answers).length < questions.length}
-          className="mt-6 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-orange-500 px-6 text-sm font-semibold text-white transition-colors hover:bg-orange-600 disabled:opacity-50"
+          className="mt-6 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-orange-500 px-6 text-sm font-semibold text-white transition-colors hover:bg-orange-600"
         >
           Valider mes réponses
         </button>
@@ -520,24 +533,24 @@ function QuizView({ lesson, onPass }: { lesson: Lesson; onPass: () => void }) {
             passed ? "border-green-500/30 bg-green-50 dark:bg-green-500/10" : "border-orange-500/30 bg-orange-50 dark:bg-orange-500/10"
           )}
         >
-          <span className={cn("flex h-12 w-12 items-center justify-center rounded-full text-white", passed ? "bg-green-500" : "bg-orange-500")}>
+          <span className={cn("flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-white", passed ? "bg-green-500" : "bg-orange-500")}>
             {passed ? <CheckCircle2 className="h-6 w-6" /> : <Target className="h-6 w-6" />}
           </span>
-          <div>
+          <div className="min-w-0">
             <p className="font-bold">
-              {passed ? "Bravo, quiz réussi !" : "Presque ! Réessayez."} {score}/{questions.length} ({percent} %)
+              {passed ? "Bravo, évaluation réussie !" : "Presque ! Réessayez."} {graded?.percent} %
             </p>
             <p className="text-sm text-[var(--text-secondary)]">
-              {passed ? "Cette leçon est validée." : "Le seuil de réussite est de 60 %."}
+              {passed ? "Cette leçon est validée." : `Le seuil de réussite est de ${quiz.passScore} %.`}
             </p>
           </div>
           {!passed && (
             <button
               onClick={() => {
                 setSubmitted(false);
-                setAnswers({});
+                setAnswers(initAnswers());
               }}
-              className="ml-auto rounded-full border border-[var(--border-subtle)] px-4 py-2 text-sm font-semibold hover:border-orange-400"
+              className="ml-auto shrink-0 rounded-full border border-[var(--border-subtle)] px-4 py-2 text-sm font-semibold hover:border-orange-400"
             >
               Recommencer
             </button>

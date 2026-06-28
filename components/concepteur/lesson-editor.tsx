@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { Plus, Trash2, Check, Loader2, PlayCircle, FileText, Target } from "lucide-react";
 import type { LessonType } from "@prisma/client";
 import { updateLesson, type LessonContentInput } from "@/lib/concepteur/actions";
+import { ExercicesBuilder } from "@/components/exercices/builder";
+import { normalizeQuizContent } from "@/lib/exercices/legacy";
+import type { QuizContent } from "@/lib/exercices/types";
 import { cn } from "@/lib/utils";
 
 const inputClass =
@@ -15,7 +18,6 @@ const labelClass = "text-sm font-medium";
 
 type Section = { heading: string; bodyText: string };
 type Chapter = { time: string; label: string };
-type Question = { question: string; optionsText: string; correct: number };
 
 type Content = Record<string, unknown>;
 
@@ -63,16 +65,8 @@ export function LessonEditor({
     return arr.map((ch) => ({ time: ch.time ?? "", label: ch.label ?? "" }));
   });
 
-  // Quiz
-  const [quizIntro, setQuizIntro] = useState(typeof c.intro === "string" && c.kind === "quiz" ? c.intro : "");
-  const [questions, setQuestions] = useState<Question[]>(() => {
-    const arr = Array.isArray(c.questions) ? (c.questions as { question?: string; options?: string[]; correct?: number }[]) : [];
-    return arr.map((q) => ({
-      question: q.question ?? "",
-      optionsText: (q.options ?? []).join("\n"),
-      correct: typeof q.correct === "number" ? q.correct : 0,
-    }));
-  });
+  // Quiz (moteur d'exercices) — normalise l'ancien format au chargement.
+  const [quiz, setQuiz] = useState<QuizContent>(() => normalizeQuizContent(initialContent));
 
   function buildContent(): LessonContentInput {
     if (type === "VIDEO") {
@@ -84,20 +78,7 @@ export function LessonEditor({
       };
     }
     if (type === "QUIZ") {
-      return {
-        kind: "quiz",
-        intro: quizIntro.trim(),
-        questions: questions
-          .map((q) => {
-            const options = q.optionsText.split("\n").map((o) => o.trim()).filter(Boolean);
-            return {
-              question: q.question.trim(),
-              options,
-              correct: Math.min(Math.max(0, q.correct), Math.max(0, options.length - 1)),
-            };
-          })
-          .filter((q) => q.question && q.options.length >= 2),
-      };
+      return { ...quiz, intro: quiz.intro.trim() };
     }
     return {
       kind: "texte",
@@ -191,9 +172,7 @@ export function LessonEditor({
             setChapters={setChapters}
           />
         )}
-        {type === "QUIZ" && (
-          <QuizEditor intro={quizIntro} setIntro={setQuizIntro} questions={questions} setQuestions={setQuestions} />
-        )}
+        {type === "QUIZ" && <ExercicesBuilder value={quiz} onChange={setQuiz} />}
       </section>
 
       {/* Actions */}
@@ -356,94 +335,3 @@ function VideoEditor({
   );
 }
 
-/* ---------------- Quiz ---------------- */
-function QuizEditor({
-  intro,
-  setIntro,
-  questions,
-  setQuestions,
-}: {
-  intro: string;
-  setIntro: (v: string) => void;
-  questions: Question[];
-  setQuestions: React.Dispatch<React.SetStateAction<Question[]>>;
-}) {
-  return (
-    <div className="space-y-5">
-      <div className="space-y-1.5">
-        <label className={labelClass}>Consigne</label>
-        <textarea
-          value={intro}
-          onChange={(e) => setIntro(e.target.value)}
-          rows={2}
-          placeholder="Validez vos acquis sur ce module."
-          className={textareaClass}
-        />
-      </div>
-
-      {questions.map((q, i) => {
-        const options = q.optionsText.split("\n").map((o) => o.trim()).filter(Boolean);
-        return (
-          <div key={i} className="rounded-2xl border border-[var(--border-subtle)] p-4">
-            <div className="flex items-center justify-between gap-2">
-              <span className="text-sm font-semibold">Question {i + 1}</span>
-              <button
-                type="button"
-                onClick={() => setQuestions((arr) => arr.filter((_, j) => j !== i))}
-                aria-label="Supprimer la question"
-                className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border-subtle)] text-[var(--text-secondary)] transition-colors hover:border-red-300 hover:text-red-600"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
-            <input
-              value={q.question}
-              onChange={(e) => setQuestions((arr) => arr.map((x, j) => (j === i ? { ...x, question: e.target.value } : x)))}
-              placeholder="Énoncé de la question"
-              className={cn(inputClass, "mt-3")}
-            />
-            <div className="mt-3 space-y-1.5">
-              <label className="text-xs font-medium text-[var(--text-secondary)]">
-                Réponses (une par ligne)
-              </label>
-              <textarea
-                value={q.optionsText}
-                onChange={(e) => setQuestions((arr) => arr.map((x, j) => (j === i ? { ...x, optionsText: e.target.value } : x)))}
-                rows={4}
-                placeholder={"Première réponse\nDeuxième réponse\nTroisième réponse"}
-                className={textareaClass}
-              />
-            </div>
-            <div className="mt-3 flex items-center gap-2">
-              <label className="text-xs font-medium text-[var(--text-secondary)]">Bonne réponse :</label>
-              <select
-                value={q.correct}
-                onChange={(e) => setQuestions((arr) => arr.map((x, j) => (j === i ? { ...x, correct: Number(e.target.value) } : x)))}
-                disabled={options.length === 0}
-                className="h-9 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-2 text-sm outline-none focus:border-orange-500 disabled:opacity-50"
-              >
-                {options.length === 0 ? (
-                  <option value={0}>—</option>
-                ) : (
-                  options.map((opt, oi) => (
-                    <option key={oi} value={oi}>
-                      {opt.length > 40 ? opt.slice(0, 40) + "…" : opt}
-                    </option>
-                  ))
-                )}
-              </select>
-            </div>
-          </div>
-        );
-      })}
-
-      <button
-        type="button"
-        onClick={() => setQuestions((arr) => [...arr, { question: "", optionsText: "", correct: 0 }])}
-        className="inline-flex h-10 items-center gap-2 rounded-full border border-dashed border-[var(--border-subtle)] px-4 text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:border-orange-400 hover:text-orange-600"
-      >
-        <Plus className="h-4 w-4" /> Ajouter une question
-      </button>
-    </div>
-  );
-}
