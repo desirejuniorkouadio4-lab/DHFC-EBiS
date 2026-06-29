@@ -320,6 +320,13 @@ async function main() {
     });
   }
 
+  // --- Messagerie : conversation de démo (Konan ↔ Fatou) ---
+  const conv = await prisma.conversation.create({
+    data: { participants: { create: [{ userId: user.id }, { userId: tutorId }] }, lastMessageAt: new Date(Date.now() - 3600000) },
+  });
+  await prisma.message.create({ data: { conversationId: conv.id, senderId: user.id, body: "Bonjour Mme Diabaté, j'ai une question sur le devoir du module 2.", createdAt: new Date(Date.now() - 7200000) } });
+  await prisma.message.create({ data: { conversationId: conv.id, senderId: tutorId, body: "Bonjour Konan, bien sûr, je vous écoute. N'hésitez pas à préciser sur quel point vous bloquez.", createdAt: new Date(Date.now() - 3600000) } });
+
   // --- Récap ---
   const counts = {
     disciplines: await prisma.discipline.count(),

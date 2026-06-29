@@ -72,6 +72,8 @@ model User {
   gradedSubmissions Submission[]  @relation("GradedSubmissions")
   forumThreads   ForumThread[]    @relation("ForumThreads")
   forumPosts     ForumPost[]      @relation("ForumPosts")
+  conversations  ConversationParticipant[]
+  sentMessages   Message[]        @relation("SentMessages")
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 }
@@ -270,6 +272,41 @@ model ForumPost {
   createdAt DateTime    @default(now())
 
   @@index([threadId])
+}
+
+// Messagerie privée (§14.3) : conversations 1-à-1 + messages.
+model Conversation {
+  id            String                    @id @default(cuid())
+  participants  ConversationParticipant[]
+  messages      Message[]
+  lastMessageAt DateTime                  @default(now())
+  createdAt     DateTime                  @default(now())
+
+  @@index([lastMessageAt])
+}
+
+model ConversationParticipant {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lastReadAt     DateTime?
+
+  @@unique([conversationId, userId])
+  @@index([userId])
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  senderId       String
+  sender         User         @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  body           String       @db.Text
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId])
 }
 
 // Médiathèque centralisée (§17.5) : fichiers téléversés réutilisables.
