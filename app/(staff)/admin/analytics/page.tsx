@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { ArrowLeft, Activity, Users, TrendingUp, BarChart3 } from "lucide-react";
 import { requireRole } from "@/lib/auth-helpers";
-import { getAnalytics, type Point } from "@/lib/admin/analytics";
+import { getAnalytics } from "@/lib/admin/analytics";
+import { VerticalBars, HorizontalBars } from "@/components/admin/animated-charts";
 
 export const dynamic = "force-dynamic";
 
@@ -67,48 +68,3 @@ function Stat({ icon: Icon, label, value, tone }: { icon: typeof Users; label: s
   );
 }
 
-function VerticalBars({ points }: { points: Point[] }) {
-  const max = Math.max(1, ...points.map((p) => p.value));
-  return (
-    <div className="mt-6 flex h-44 items-end gap-2">
-      {points.map((p, i) => (
-        <div key={i} className="flex flex-1 flex-col items-center gap-1.5">
-          <span className="text-xs font-semibold text-[var(--text-secondary)]">{p.value}</span>
-          <div className="flex w-full flex-1 items-end">
-            <div
-              className="w-full rounded-t-lg bg-gradient-to-t from-orange-500 to-green-500"
-              style={{ height: `${Math.max(3, (p.value / max) * 100)}%` }}
-              title={`${p.label} : ${p.value}`}
-            />
-          </div>
-          <span className="text-[10px] text-[var(--text-secondary)]">{p.label}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function HorizontalBars({ points, suffix = "", max }: { points: Point[]; suffix?: string; max?: number }) {
-  const top = max ?? Math.max(1, ...points.map((p) => p.value));
-  if (points.length === 0) {
-    return <p className="mt-4 text-sm text-[var(--text-secondary)]">Aucune donnée.</p>;
-  }
-  return (
-    <ul className="mt-4 space-y-3">
-      {points.map((p, i) => (
-        <li key={i}>
-          <div className="mb-1 flex items-center justify-between gap-2 text-sm">
-            <span className="min-w-0 truncate font-medium">{p.label}</span>
-            <span className="shrink-0 font-semibold text-orange-600">
-              {p.value}
-              {suffix}
-            </span>
-          </div>
-          <div className="h-2 overflow-hidden rounded-full bg-[var(--bg-secondary)]">
-            <div className="h-full rounded-full bg-gradient-to-r from-orange-500 to-green-500" style={{ width: `${Math.max(2, (p.value / top) * 100)}%` }} />
-          </div>
-        </li>
-      ))}
-    </ul>
-  );
-}

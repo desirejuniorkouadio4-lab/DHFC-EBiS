@@ -28,9 +28,9 @@ export default async function TuteurPage() {
       </div>
 
       <div className="grid grid-cols-3 gap-3 sm:max-w-lg">
-        <Stat icon={Users} label="Apprenants" value={totalLearners} />
-        <Stat icon={GraduationCap} label="Cohortes" value={cohorts.length} />
-        <Stat icon={AlertTriangle} label="À suivre" value={totalWatch} tone="amber" />
+        <Stat icon={Users} label="Apprenants" value={totalLearners} href="#cohortes" />
+        <Stat icon={GraduationCap} label="Cohortes" value={cohorts.length} href="#cohortes" />
+        <Stat icon={AlertTriangle} label="À suivre" value={totalWatch} tone="amber" href="#cohortes" />
       </div>
 
       {/* Accès à la file de correction */}
@@ -66,7 +66,7 @@ export default async function TuteurPage() {
           </p>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div id="cohortes" className="grid scroll-mt-20 gap-4 sm:grid-cols-2">
           {cohorts.map((c) => (
             <Link
               key={c.id}
@@ -119,17 +119,27 @@ function Stat({
   label,
   value,
   tone,
+  href,
 }: {
   icon: typeof Users;
   label: string;
   value: number;
   tone?: "amber";
+  href?: string;
 }) {
-  return (
-    <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
+  const inner = (
+    <>
       <Icon className={`h-5 w-5 ${tone === "amber" ? "text-amber-600" : "text-orange-500"}`} />
       <p className="mt-2 text-2xl font-bold">{value}</p>
       <p className="text-xs text-[var(--text-secondary)]">{label}</p>
-    </div>
+    </>
   );
+  if (href) {
+    return (
+      <Link href={href} className="block rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4 transition-all hover:-translate-y-0.5 hover:border-orange-300 hover:shadow-md">
+        {inner}
+      </Link>
+    );
+  }
+  return <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">{inner}</div>;
 }

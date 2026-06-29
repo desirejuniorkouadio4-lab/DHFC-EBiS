@@ -35,11 +35,11 @@ export default async function EncadreurPage() {
 
       {/* Indicateurs globaux */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <Kpi icon={Users} label="Apprenants" value={o.totalLearners} />
-        <Kpi icon={Activity} label="Actifs (7 j)" value={o.activeLast7d} tone="green" />
-        <Kpi icon={TrendingUp} label="Complétion moy." value={`${o.avgCompletion}%`} tone="orange" />
-        <Kpi icon={GraduationCap} label="Cohortes" value={o.cohortsCount} hint={o.unassignedCohorts ? `${o.unassignedCohorts} sans tuteur` : undefined} />
-        <Kpi icon={ClipboardCheck} label="À corriger" value={o.pendingCorrections} tone={o.pendingCorrections ? "amber" : undefined} />
+        <Kpi icon={Users} label="Apprenants" value={o.totalLearners} href="/tuteur" />
+        <Kpi icon={Activity} label="Actifs (7 j)" value={o.activeLast7d} tone="green" href="/tuteur" />
+        <Kpi icon={TrendingUp} label="Complétion moy." value={`${o.avgCompletion}%`} tone="orange" href="/tuteur" />
+        <Kpi icon={GraduationCap} label="Cohortes" value={o.cohortsCount} hint={o.unassignedCohorts ? `${o.unassignedCohorts} sans tuteur` : undefined} href="/tuteur" />
+        <Kpi icon={ClipboardCheck} label="À corriger" value={o.pendingCorrections} tone={o.pendingCorrections ? "amber" : undefined} href="/tuteur/corrections" />
       </div>
 
       {/* Comparaison entre tuteurs */}
@@ -130,23 +130,36 @@ function Kpi({
   value,
   hint,
   tone,
+  href,
 }: {
   icon: typeof Users;
   label: string;
   value: number | string;
   hint?: string;
   tone?: "green" | "orange" | "amber";
+  href?: string;
 }) {
   const color =
     tone === "green" ? "text-green-600" : tone === "orange" ? "text-orange-600" : tone === "amber" ? "text-amber-600" : "text-[var(--text-primary)]";
-  return (
-    <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
-      <Icon className="h-5 w-5 text-[var(--text-secondary)]" />
+  const inner = (
+    <>
+      <div className="flex items-center justify-between">
+        <Icon className="h-5 w-5 text-[var(--text-secondary)]" />
+        {href && <ExternalLink className="h-3.5 w-3.5 text-[var(--text-secondary)] opacity-0 transition-opacity group-hover:opacity-100" />}
+      </div>
       <p className={`mt-2 text-2xl font-bold ${color}`}>{value}</p>
       <p className="text-xs text-[var(--text-secondary)]">{label}</p>
       {hint && <p className="mt-0.5 text-xs text-amber-600">{hint}</p>}
-    </div>
+    </>
   );
+  if (href) {
+    return (
+      <Link href={href} className="group rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4 transition-all hover:-translate-y-0.5 hover:border-orange-300 hover:shadow-md">
+        {inner}
+      </Link>
+    );
+  }
+  return <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">{inner}</div>;
 }
 
 function Cell({ label, value }: { label: string; value: number }) {
