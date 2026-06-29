@@ -124,6 +124,117 @@ export async function importUsers(formData: FormData): Promise<void> {
   redirect(`/admin/utilisateurs?created=${created}&skipped=${skipped}`);
 }
 
+/**
+ * Inscrit un utilisateur dans une cohorte = l'inscrit aux parcours de cette
+ * cohorte (dérivés des inscriptions existantes), avec le tuteur attitré.
+ */
+async function enrollUserInCohort(userId: string, cohortId: string): Promise<void> {
+  const cohort = await prisma.cohort.findUnique({
+    where: { id: cohortId },
+    select: {
+      enrollments: { select: { parcoursId: true }, distinct: ["parcoursId"] },
+      tutor: { select: { firstName: true, lastName: true } },
+    },
+  });
+  if (!cohort) return;
+  const tutorName = cohort.tutor ? `${cohort.tutor.firstName} ${cohort.tutor.lastName}` : null;
+  for (const { parcoursId } of cohort.enrollments) {
+    await prisma.enrollment.upsert({
+      where: { userId_parcoursId: { userId, parcoursId } },
+      update: { cohortId, tutorName },
+      create: { userId, parcoursId, cohortId, tutorName, progress: 0 },
+    });
+  }
+}
+
+/** Crée un utilisateur manuellement (mot de passe temporaire), cohorte optionnelle. */
+export async function createUser(formData: FormData): Promise<void> {
+  const actor = await requireRole(["ADMIN", "SUPERADMIN"]);
+  const firstName = String(formData.get("firstName") ?? "").trim();
+  const lastName = String(formData.get("lastName") ?? "").trim();
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const rawRole = String(formData.get("role") ?? "APPRENANT").toUpperCase() as Role;
+  const cohortId = String(formData.get("cohortId") ?? "") || null;
+
+  if (!firstName || !lastName || !EMAIL_RE.test(email)) redirect("/admin/utilisateurs?create=invalide");
+  // Seul un SUPERADMIN peut créer un SUPERADMIN.
+  const role: Role = ROLES.includes(rawRole) && (rawRole !== "SUPERADMIN" || actor.role === "SUPERADMIN") ? rawRole : "APPRENANT";
+
+  const exists = await prisma.user.findUnique({ where: { email }, select: { id: true } });
+  if (exists) redirect("/admin/utilisateurs?create=doublon");
+
+  const passwordHash = await bcrypt.hash("Bienvenue2026!", 10);
+  const user = await prisma.user.create({
+    data: {
+      email,
+      firstName,
+      lastName,
+      role,
+      passwordHash,
+      bivalence: String(formData.get("bivalence") ?? "").trim() || null,
+      region: String(formData.get("region") ?? "").trim() || null,
+      dren: String(formData.get("dren") ?? "").trim() || null,
+      college: String(formData.get("college") ?? "").trim() || null,
+    },
+  });
+
+  if (cohortId) await enrollUserInCohort(user.id, cohortId);
+
+  revalidatePath("/admin/utilisateurs");
+  revalidatePath("/admin");
+  redirect("/admin/utilisateurs?create=ok");
+}
+
+/** Filtre des ids ciblables par une action de lot (jamais soi-même ; protège les SUPERADMIN). */
+async function targetableIds(ids: string[], actor: { id: string; role: string }): Promise<string[]> {
+  const clean = [...new Set(ids.filter((id) => id && id !== actor.id))];
+  if (clean.length === 0) return [];
+  if (actor.role === "SUPERADMIN") return clean;
+  // Un ADMIN ne peut pas agir sur un SUPERADMIN.
+  const supers = await prisma.user.findMany({ where: { id: { in: clean }, role: "SUPERADMIN" }, select: { id: true } });
+  const blocked = new Set(supers.map((s) => s.id));
+  return clean.filter((id) => !blocked.has(id));
+}
+
+/** Active / désactive en lot. */
+export async function bulkSetActive(ids: string[], active: boolean): Promise<void> {
+  const actor = await requireRole(["ADMIN", "SUPERADMIN"]);
+  const targets = await targetableIds(ids, actor);
+  if (targets.length) await prisma.user.updateMany({ where: { id: { in: targets } }, data: { active } });
+  revalidatePath("/admin/utilisateurs");
+  revalidatePath("/admin");
+}
+
+/** Change le rôle en lot. */
+export async function bulkSetRole(ids: string[], role: string): Promise<void> {
+  const actor = await requireRole(["ADMIN", "SUPERADMIN"]);
+  if (!ROLES.includes(role as Role)) return;
+  if (role === "SUPERADMIN" && actor.role !== "SUPERADMIN") return;
+  const targets = await targetableIds(ids, actor);
+  if (targets.length) await prisma.user.updateMany({ where: { id: { in: targets } }, data: { role: role as Role } });
+  revalidatePath("/admin/utilisateurs");
+  revalidatePath("/admin");
+}
+
+/** Ajoute en lot des utilisateurs à une cohorte (inscription à ses parcours). */
+export async function bulkEnrollCohort(ids: string[], cohortId: string): Promise<void> {
+  const actor = await requireRole(["ADMIN", "SUPERADMIN"]);
+  if (!cohortId) return;
+  const targets = await targetableIds(ids, actor);
+  for (const id of targets) await enrollUserInCohort(id, cohortId);
+  revalidatePath("/admin/utilisateurs");
+  revalidatePath("/admin");
+}
+
+/** Supprime des comptes en lot (et leurs données liées via cascade). */
+export async function bulkDeleteUsers(ids: string[]): Promise<void> {
+  const actor = await requireRole(["ADMIN", "SUPERADMIN"]);
+  const targets = await targetableIds(ids, actor);
+  if (targets.length) await prisma.user.deleteMany({ where: { id: { in: targets } } });
+  revalidatePath("/admin/utilisateurs");
+  revalidatePath("/admin");
+}
+
 /** Met à jour les paramètres système (§17.6). */
 export async function updateSiteSettings(formData: FormData): Promise<void> {
   await requireRole(["ADMIN", "SUPERADMIN"]);
