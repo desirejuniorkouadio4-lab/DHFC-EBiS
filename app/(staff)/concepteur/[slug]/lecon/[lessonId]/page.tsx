@@ -36,6 +36,9 @@ export default async function EditLessonPage({
         initialType={lesson.type}
         initialDuration={lesson.durationMin}
         initialContent={lesson.content}
+        initialCompletion={lesson.completion}
+        initialAccess={lesson.access}
+        siblings={lesson.siblings}
         backHref={`/concepteur/${slug}`}
         blobEnabled={!!process.env.BLOB_READ_WRITE_TOKEN}
       />

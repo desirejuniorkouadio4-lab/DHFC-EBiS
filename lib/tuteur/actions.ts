@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth-helpers";
+import { recomputeAutoCompletion } from "@/lib/completion/recompute";
+import { parcoursSlugOfLesson } from "@/lib/lms/progress";
 
 function canSeeAll(role: string): boolean {
   return role === "ENCADREUR" || role === "ADMIN" || role === "SUPERADMIN";
@@ -15,7 +17,7 @@ export async function gradeSubmission(submissionId: string, formData: FormData):
 
   const submission = await prisma.submission.findUnique({
     where: { id: submissionId },
-    select: { maxScore: true, cohort: { select: { tutorId: true } } },
+    select: { maxScore: true, userId: true, lessonId: true, cohort: { select: { tutorId: true } } },
   });
   if (!submission) return;
   if (!canSeeAll(actor.role) && submission.cohort?.tutorId !== actor.id) return;
@@ -34,6 +36,13 @@ export async function gradeSubmission(submissionId: string, formData: FormData):
       gradedAt: new Date(),
     },
   });
+
+  // Signal « note reçue » → recalcule l'achèvement automatique de la leçon.
+  const slug = await parcoursSlugOfLesson(submission.lessonId);
+  if (slug) {
+    await recomputeAutoCompletion(submission.userId, slug, submission.lessonId);
+    revalidatePath(`/apprendre/${slug}`, "layout");
+  }
 
   revalidatePath("/tuteur/corrections");
   revalidatePath("/tuteur");

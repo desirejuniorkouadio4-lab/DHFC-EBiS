@@ -10,6 +10,9 @@ import { normalizeQuizContent } from "@/lib/exercices/legacy";
 import type { QuizContent } from "@/lib/exercices/types";
 import { BlockEditor } from "@/components/concepteur/block-editor";
 import { normalizeBlocks, type Block } from "@/lib/blocks/types";
+import { CompletionAccessEditor } from "@/components/concepteur/completion-editor";
+import { normalizeCompletion, normalizeAccess, type CompletionRule, type AccessRule } from "@/lib/completion/types";
+import type { LessonSibling } from "@/lib/concepteur/db";
 import { cn } from "@/lib/utils";
 
 const inputClass =
@@ -33,6 +36,9 @@ export function LessonEditor({
   initialType,
   initialDuration,
   initialContent,
+  initialCompletion,
+  initialAccess,
+  siblings,
   backHref,
   blobEnabled,
 }: {
@@ -41,6 +47,9 @@ export function LessonEditor({
   initialType: LessonType;
   initialDuration: number;
   initialContent: unknown;
+  initialCompletion: unknown;
+  initialAccess: unknown;
+  siblings: LessonSibling[];
   backHref: string;
   blobEnabled: boolean;
 }) {
@@ -51,6 +60,8 @@ export function LessonEditor({
   const [title, setTitle] = useState(initialTitle);
   const [type, setType] = useState<LessonType>(initialType);
   const [duration, setDuration] = useState(initialDuration);
+  const [completion, setCompletion] = useState<CompletionRule>(() => normalizeCompletion(initialCompletion));
+  const [access, setAccess] = useState<AccessRule>(() => normalizeAccess(initialAccess));
 
   // Lecture (blocs de contenu) — normalise l'ancien format au chargement.
   const [blocks, setBlocks] = useState<Block[]>(() => normalizeBlocks(initialContent).blocks);
@@ -85,7 +96,7 @@ export function LessonEditor({
     if (!title.trim()) return;
     const content = buildContent();
     startTransition(async () => {
-      await updateLesson(lessonId, { title: title.trim(), type, durationMin: duration, content });
+      await updateLesson(lessonId, { title: title.trim(), type, durationMin: duration, content, completion, access });
     });
   }
 
@@ -163,6 +174,18 @@ export function LessonEditor({
           />
         )}
         {type === "QUIZ" && <ExercicesBuilder value={quiz} onChange={setQuiz} blobEnabled={blobEnabled} />}
+      </section>
+
+      {/* Achèvement & restrictions d'accès (Moodle-like) */}
+      <section className="rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-6">
+        <h2 className="mb-4 font-bold">Achèvement &amp; disponibilité</h2>
+        <CompletionAccessEditor
+          completion={completion}
+          setCompletion={setCompletion}
+          access={access}
+          setAccess={setAccess}
+          siblings={siblings}
+        />
       </section>
 
       {/* Actions */}

@@ -121,15 +121,21 @@ export async function getParcoursForEdit(slug: string): Promise<ParcoursForEdit 
   return p;
 }
 
+export type LessonSibling = { id: string; title: string; moduleTitle: string };
+
 export type LessonForEdit = {
   id: string;
   title: string;
   type: LessonType;
   durationMin: number;
   content: unknown;
+  completion: unknown;
+  access: unknown;
   moduleTitle: string;
   parcoursSlug: string;
   parcoursTitle: string;
+  /** Autres leçons du parcours (candidats prérequis d'accès). */
+  siblings: LessonSibling[];
 };
 
 /** Une leçon avec son contenu, pour l'éditeur de leçon. */
@@ -142,21 +148,41 @@ export async function getLessonForEdit(lessonId: string): Promise<LessonForEdit 
       type: true,
       durationMin: true,
       content: true,
+      completion: true,
+      access: true,
       module: {
-        select: { title: true, parcours: { select: { slug: true, title: true } } },
+        select: {
+          title: true,
+          parcours: {
+            select: {
+              slug: true,
+              title: true,
+              modules: {
+                orderBy: { index: "asc" },
+                select: { title: true, lessons: { orderBy: { index: "asc" }, select: { id: true, title: true } } },
+              },
+            },
+          },
+        },
       },
     },
   });
   if (!l) return null;
+  const siblings: LessonSibling[] = l.module.parcours.modules.flatMap((m) =>
+    m.lessons.filter((x) => x.id !== l.id).map((x) => ({ id: x.id, title: x.title, moduleTitle: m.title }))
+  );
   return {
     id: l.id,
     title: l.title,
     type: l.type,
     durationMin: l.durationMin,
     content: l.content,
+    completion: l.completion,
+    access: l.access,
     moduleTitle: l.module.title,
     parcoursSlug: l.module.parcours.slug,
     parcoursTitle: l.module.parcours.title,
+    siblings,
   };
 }
 

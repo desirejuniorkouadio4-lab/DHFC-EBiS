@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { Curriculum, LessonContent, LessonType } from "./curriculum";
+import { normalizeCompletion, normalizeAccess } from "@/lib/completion/types";
 
 /**
  * Couche d'accès LMS (Server Components / actions → Prisma → Neon).
@@ -30,9 +31,10 @@ export async function getCurriculumDB(slug: string): Promise<Curriculum | null> 
         select: {
           index: true,
           title: true,
+          access: true,
           lessons: {
             orderBy: { index: "asc" },
-            select: { id: true, title: true, type: true, durationMin: true, content: true },
+            select: { id: true, title: true, type: true, durationMin: true, content: true, completion: true, access: true },
           },
         },
       },
@@ -43,6 +45,7 @@ export async function getCurriculumDB(slug: string): Promise<Curriculum | null> 
   const modules = parcours.modules.map((m) => ({
     index: m.index,
     title: m.title,
+    access: normalizeAccess(m.access),
     lessons: m.lessons.map((l) => ({
       id: l.id,
       title: l.title,
@@ -53,6 +56,8 @@ export async function getCurriculumDB(slug: string): Promise<Curriculum | null> 
       objectives: DEFAULT_OBJECTIVES,
       content: (l.content ?? { kind: "texte", sections: [] }) as unknown as LessonContent,
       resources: DEFAULT_RESOURCES,
+      completion: normalizeCompletion(l.completion),
+      access: normalizeAccess(l.access),
     })),
   }));
 

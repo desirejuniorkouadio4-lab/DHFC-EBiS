@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -25,12 +25,14 @@ import {
 } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
 import { ProgressBar } from "@/components/lms/progress-bar";
-import { toggleLessonComplete, markLessonComplete, submitEssays, recordQuizResult } from "@/lib/lms/actions";
+import { toggleLessonComplete, markLessonComplete, submitEssays, recordQuizResult, recordLessonView } from "@/lib/lms/actions";
 import type { Curriculum, Lesson, LessonType } from "@/lib/lms/curriculum";
 import { ExercicePlayer, type SubmissionView } from "@/components/exercices/player";
 import { normalizeQuizContent } from "@/lib/exercices/legacy";
 import { emptyAnswer, isManualType, type Exercice } from "@/lib/exercices/types";
 import { gradeQuiz } from "@/lib/exercices/grade";
+import { effectiveLock, enabledConditions, type AccessState } from "@/lib/completion/engine";
+import { CONDITION_LABEL, type CompletionRule } from "@/lib/completion/types";
 import { BlockRenderer } from "@/components/blocks/block-renderer";
 import { normalizeBlocks } from "@/lib/blocks/types";
 import { cn } from "@/lib/utils";
@@ -80,7 +82,27 @@ export function CoursePlayer({
 
   const isCompleted = (id: string) => completed.has(id);
 
+  // Restrictions d'accès : état de verrouillage par leçon, réactif à la progression.
+  const lockMap = useMemo(() => {
+    const map = new Map<string, AccessState>();
+    for (const mod of curriculum.modules)
+      for (const l of mod.lessons) map.set(l.id, effectiveLock(mod.access, l.access, completed));
+    return map;
+  }, [curriculum, completed]);
+  const titleById = useMemo(() => new Map(curriculum.flat.map((l) => [l.id, l.title])), [curriculum]);
+  const lockOf = (id: string): AccessState => lockMap.get(id) ?? { locked: false, missing: [] };
+  const modeOf = (l: Lesson): CompletionRule["mode"] => l.completion?.mode ?? "manual";
+
+  // Condition d'achèvement « vue » : signale l'ouverture (si déverrouillée).
+  useEffect(() => {
+    const l = curriculum.flat.find((x) => x.id === lessonId);
+    if (!l || lockOf(l.id).locked) return;
+    void recordLessonView(slug, l.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lessonId]);
+
   function toggle(id: string) {
+    if (lockOf(id).locked) return;
     setCompleted((prev) => {
       const n = new Set(prev);
       if (n.has(id)) n.delete(id);
@@ -93,6 +115,10 @@ export function CoursePlayer({
   }
 
   function markDone(id: string) {
+    const l = curriculum.flat.find((x) => x.id === id);
+    // Achèvement automatique / désactivé : piloté côté serveur, pas de marquage manuel.
+    if (l && modeOf(l) !== "manual") return;
+    if (lockOf(id).locked) return;
     setCompleted((prev) => new Set(prev).add(id));
     startTransition(() => {
       void markLessonComplete(slug, id);
@@ -116,6 +142,16 @@ export function CoursePlayer({
   const completedCount = flat.filter((l) => completed.has(l.id)).length;
   const percent = total ? Math.round((completedCount / total) * 100) : 0;
   const done = isCompleted(lesson.id);
+  const currentLock = lockOf(lesson.id);
+  const mode = modeOf(lesson);
+  const completionControl = (
+    <CompletionControl
+      mode={mode}
+      done={done}
+      lesson={lesson}
+      onToggle={() => toggle(lesson.id)}
+    />
+  );
 
   return (
     <div className="min-h-screen bg-[var(--bg-secondary)]">
@@ -149,7 +185,7 @@ export function CoursePlayer({
       <div className="mx-auto flex max-w-[1400px]">
         {/* Sidebar desktop */}
         <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-80 shrink-0 overflow-y-auto border-r border-[var(--border-subtle)] bg-[var(--bg-primary)] lg:block">
-          <CourseSidebar slug={slug} curriculum={curriculum} currentId={lesson.id} isCompleted={isCompleted} />
+          <CourseSidebar slug={slug} curriculum={curriculum} currentId={lesson.id} isCompleted={isCompleted} lockOf={lockOf} />
         </aside>
 
         {/* Sommaire mobile (bottom sheet) */}
@@ -179,7 +215,7 @@ export function CoursePlayer({
                   </button>
                 </div>
                 <div className="min-h-0 flex-1 overflow-y-auto">
-                  <CourseSidebar slug={slug} curriculum={curriculum} currentId={lesson.id} isCompleted={isCompleted} />
+                  <CourseSidebar slug={slug} curriculum={curriculum} currentId={lesson.id} isCompleted={isCompleted} lockOf={lockOf} />
                 </div>
               </motion.aside>
             </motion.div>
@@ -189,30 +225,36 @@ export function CoursePlayer({
         {/* Contenu */}
         <main className="min-w-0 flex-1 px-4 py-6 pb-28 sm:px-8 sm:py-8 lg:pb-8">
           <div className="mx-auto max-w-3xl">
-            <LessonContent lesson={lesson} onPassQuiz={() => markDone(lesson.id)} slug={slug} submissions={submissions} blobEnabled={blobEnabled} />
+            {currentLock.locked ? (
+              <LockedPanel missing={currentLock.missing} titleById={titleById} slug={slug} />
+            ) : (
+              <>
+                <LessonContent lesson={lesson} onPassQuiz={() => markDone(lesson.id)} slug={slug} submissions={submissions} blobEnabled={blobEnabled} />
 
-            {/* Onglets */}
-            <div className="mt-8">
-              <div className="flex gap-1 overflow-x-auto border-b border-[var(--border-subtle)]">
-                {TABS.map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setTab(t)}
-                    className={cn(
-                      "shrink-0 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
-                      tab === t
-                        ? "border-orange-500 text-orange-600"
-                        : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
-                    )}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-              <div className="py-6">
-                <LessonTab tab={tab} lesson={lesson} />
-              </div>
-            </div>
+                {/* Onglets */}
+                <div className="mt-8">
+                  <div className="flex gap-1 overflow-x-auto border-b border-[var(--border-subtle)]">
+                    {TABS.map((t) => (
+                      <button
+                        key={t}
+                        onClick={() => setTab(t)}
+                        className={cn(
+                          "shrink-0 border-b-2 px-4 py-2.5 text-sm font-medium transition-colors",
+                          tab === t
+                            ? "border-orange-500 text-orange-600"
+                            : "border-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+                        )}
+                      >
+                        {t}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="py-6">
+                    <LessonTab tab={tab} lesson={lesson} />
+                  </div>
+                </div>
+              </>
+            )}
 
             {/* Navigation bas (desktop) */}
             <div className="mt-6 hidden flex-col items-stretch gap-3 border-t border-[var(--border-subtle)] pt-6 sm:flex-row sm:items-center sm:justify-between lg:flex">
@@ -227,19 +269,7 @@ export function CoursePlayer({
                 <span className="hidden sm:block" />
               )}
 
-              <button
-                type="button"
-                onClick={() => toggle(lesson.id)}
-                className={cn(
-                  "inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-semibold transition-colors",
-                  done
-                    ? "bg-green-500 text-white hover:bg-green-600"
-                    : "border border-[var(--border-subtle)] hover:border-green-400 hover:text-green-600"
-                )}
-              >
-                <Check className="h-4 w-4" />
-                {done ? "Leçon terminée" : "Marquer comme terminé"}
-              </button>
+              {currentLock.locked ? <span className="hidden sm:block" /> : completionControl}
 
               {next ? (
                 <Link
@@ -277,17 +307,35 @@ export function CoursePlayer({
           <span className="h-11 w-11 shrink-0" />
         )}
 
-        <button
-          type="button"
-          onClick={() => toggle(lesson.id)}
-          className={cn(
-            "inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-full text-sm font-semibold transition-colors",
-            done ? "bg-green-500 text-white" : "border border-[var(--border-subtle)] text-[var(--text-primary)]"
-          )}
-        >
-          <Check className="h-4 w-4" />
-          {done ? "Terminée" : "Marquer terminé"}
-        </button>
+        {currentLock.locked ? (
+          <span className="inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-full border border-[var(--border-subtle)] text-sm font-semibold text-[var(--text-secondary)]">
+            <Lock className="h-4 w-4" /> Verrouillé
+          </span>
+        ) : mode === "none" ? (
+          <span className="flex-1" />
+        ) : mode === "auto" ? (
+          <span
+            className={cn(
+              "inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-full text-sm font-semibold",
+              done ? "bg-green-500 text-white" : "border border-[var(--border-subtle)] text-[var(--text-secondary)]"
+            )}
+          >
+            {done ? <Check className="h-4 w-4" /> : <Timer className="h-4 w-4" />}
+            {done ? "Validée" : "Suivi auto"}
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={() => toggle(lesson.id)}
+            className={cn(
+              "inline-flex h-11 flex-1 items-center justify-center gap-2 rounded-full text-sm font-semibold transition-colors",
+              done ? "bg-green-500 text-white" : "border border-[var(--border-subtle)] text-[var(--text-primary)]"
+            )}
+          >
+            <Check className="h-4 w-4" />
+            {done ? "Terminée" : "Marquer terminé"}
+          </button>
+        )}
 
         {next ? (
           <Link
@@ -321,11 +369,13 @@ function CourseSidebar({
   curriculum,
   currentId,
   isCompleted,
+  lockOf,
 }: {
   slug: string;
   curriculum: Curriculum;
   currentId: string;
   isCompleted: (id: string) => boolean;
+  lockOf: (id: string) => AccessState;
 }) {
   return (
     <div className="p-3">
@@ -339,6 +389,42 @@ function CourseSidebar({
               const Icon = TYPE_ICON[l.type];
               const current = l.id === currentId;
               const completed = isCompleted(l.id);
+              const locked = lockOf(l.id).locked;
+              const marker = completed ? (
+                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
+              ) : locked ? (
+                <Lock className="mt-0.5 h-4 w-4 shrink-0 text-neutral-400 dark:text-neutral-500" />
+              ) : current ? (
+                <CircleDot className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" />
+              ) : (
+                <Circle className="mt-0.5 h-4 w-4 shrink-0 text-neutral-300 dark:text-neutral-600" />
+              );
+              const inner = (
+                <>
+                  {marker}
+                  <span className="min-w-0 flex-1">
+                    <span className="block leading-snug">{l.title}</span>
+                    <span className="mt-0.5 flex items-center gap-1.5 text-xs font-normal text-[var(--text-secondary)]">
+                      <Icon className="h-3 w-3" />
+                      {locked ? "Verrouillé" : `${l.durationMin} min`}
+                    </span>
+                  </span>
+                </>
+              );
+
+              if (locked) {
+                return (
+                  <li key={l.id}>
+                    <div
+                      aria-disabled
+                      title="Activité verrouillée : terminez les prérequis"
+                      className="flex cursor-not-allowed items-start gap-2.5 rounded-xl px-3 py-2.5 text-sm text-[var(--text-secondary)] opacity-60"
+                    >
+                      {inner}
+                    </div>
+                  </li>
+                );
+              }
               return (
                 <li key={l.id}>
                   <Link
@@ -350,20 +436,7 @@ function CourseSidebar({
                         : "hover:bg-[var(--bg-secondary)]"
                     )}
                   >
-                    {completed ? (
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-green-500" />
-                    ) : current ? (
-                      <CircleDot className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" />
-                    ) : (
-                      <Circle className="mt-0.5 h-4 w-4 shrink-0 text-neutral-300 dark:text-neutral-600" />
-                    )}
-                    <span className="min-w-0 flex-1">
-                      <span className="block leading-snug">{l.title}</span>
-                      <span className="mt-0.5 flex items-center gap-1.5 text-xs font-normal text-[var(--text-secondary)]">
-                        <Icon className="h-3 w-3" />
-                        {l.durationMin} min
-                      </span>
-                    </span>
+                    {inner}
                   </Link>
                 </li>
               );
@@ -372,6 +445,92 @@ function CourseSidebar({
         </div>
       ))}
     </div>
+  );
+}
+
+/** Panneau affiché lorsqu'une activité est verrouillée par restriction d'accès. */
+function LockedPanel({
+  missing,
+  titleById,
+  slug,
+}: {
+  missing: string[];
+  titleById: Map<string, string>;
+  slug: string;
+}) {
+  return (
+    <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-8 text-center">
+      <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[var(--bg-secondary)]">
+        <Lock className="h-7 w-7 text-[var(--text-secondary)]" />
+      </span>
+      <h2 className="mt-4 text-lg font-bold">Activité verrouillée</h2>
+      <p className="mt-1 text-sm text-[var(--text-secondary)]">
+        Terminez d'abord {missing.length > 1 ? "les activités suivantes" : "l'activité suivante"} pour
+        débloquer cette leçon :
+      </p>
+      <ul className="mx-auto mt-4 max-w-sm space-y-2 text-left">
+        {missing.map((id) => (
+          <li key={id}>
+            <Link
+              href={`/apprendre/${slug}/${id}`}
+              className="flex items-center gap-2.5 rounded-xl border border-[var(--border-subtle)] px-4 py-3 text-sm font-medium transition-colors hover:border-orange-400"
+            >
+              <Circle className="h-4 w-4 shrink-0 text-orange-500" />
+              <span className="min-w-0 flex-1 truncate">{titleById.get(id) ?? "Activité requise"}</span>
+              <ChevronRight className="h-4 w-4 shrink-0 text-[var(--text-secondary)]" />
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** Contrôle d'achèvement (desktop) — selon le mode configuré. */
+function CompletionControl({
+  mode,
+  done,
+  lesson,
+  onToggle,
+}: {
+  mode: CompletionRule["mode"];
+  done: boolean;
+  lesson: Lesson;
+  onToggle: () => void;
+}) {
+  if (mode === "none") return <span className="hidden sm:block" />;
+
+  if (mode === "auto") {
+    const rule = lesson.completion;
+    const conds = rule ? enabledConditions(rule).map((c) => CONDITION_LABEL[c].toLowerCase()) : [];
+    return (
+      <span
+        title={conds.length ? `Validation automatique : ${conds.join(" · ")}` : undefined}
+        className={cn(
+          "inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-semibold",
+          done ? "bg-green-500 text-white" : "border border-[var(--border-subtle)] text-[var(--text-secondary)]"
+        )}
+      >
+        {done ? <Check className="h-4 w-4" /> : <Timer className="h-4 w-4" />}
+        {done ? "Validée automatiquement" : "Suivi automatique"}
+      </span>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={cn(
+        "inline-flex h-11 items-center justify-center gap-2 rounded-full px-5 text-sm font-semibold transition-colors",
+        done
+          ? "bg-green-500 text-white hover:bg-green-600"
+          : "border border-[var(--border-subtle)] hover:border-green-400 hover:text-green-600"
+      )}
+    >
+      <Check className="h-4 w-4" />
+      {done ? "Leçon terminée" : "Marquer comme terminé"}
+    </button>
   );
 }
 
@@ -606,7 +765,7 @@ function QuizView({
     const g = gradeQuiz(quiz.exercices, answers);
     if (hasAuto) {
       startTransition(() => {
-        void recordQuizResult(g.percent);
+        void recordQuizResult(slug, lessonId, g.percent);
       });
     }
     if (!hasAuto || g.percent >= quiz.passScore) onPass();

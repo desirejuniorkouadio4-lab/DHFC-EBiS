@@ -5,6 +5,7 @@
  */
 
 import { PARCOURS, DISCIPLINES, type Parcours } from "@/lib/data";
+import type { CompletionRule, AccessRule } from "@/lib/completion/types";
 
 export type LessonType = "video" | "texte" | "quiz";
 
@@ -28,12 +29,15 @@ export type Lesson = {
   objectives: string[];
   content: LessonContent;
   resources: Resource[];
+  completion?: CompletionRule;
+  access?: AccessRule;
 };
 
 export type CurriculumModule = {
   index: number;
   title: string;
   lessons: Lesson[];
+  access?: AccessRule;
 };
 
 export type Curriculum = {

@@ -8,6 +8,7 @@ import type { Level, LessonType } from "@prisma/client";
 import type { QuizContent } from "@/lib/exercices/types";
 import type { BlocksContent } from "@/lib/blocks/types";
 import { deletePublicFile } from "@/lib/storage/blob";
+import { normalizeCompletion, normalizeAccess, type CompletionRule, type AccessRule } from "@/lib/completion/types";
 
 function isStoredUrl(url: string): boolean {
   return /^(https?:\/\/|\/uploads\/)/.test(url);
@@ -319,7 +320,14 @@ export type LessonContentInput =
 
 export async function updateLesson(
   lessonId: string,
-  data: { title: string; type: LessonType; durationMin: number; content: LessonContentInput }
+  data: {
+    title: string;
+    type: LessonType;
+    durationMin: number;
+    content: LessonContentInput;
+    completion?: CompletionRule;
+    access?: AccessRule;
+  }
 ): Promise<void> {
   await guard();
   const title = data.title.trim();
@@ -331,6 +339,8 @@ export async function updateLesson(
       type: data.type,
       durationMin: Math.max(1, data.durationMin || 1),
       content: data.content as object,
+      completion: normalizeCompletion(data.completion) as object,
+      access: normalizeAccess(data.access) as object,
     },
   });
   const slug = await parcoursSlugOfLesson(lessonId);

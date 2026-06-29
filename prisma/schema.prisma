@@ -113,6 +113,7 @@ model Module {
   parcours   Parcours @relation(fields: [parcoursId], references: [id], onDelete: Cascade)
   index      Int
   title      String
+  access     Json? // AccessRule (restriction d'accès au module §13.x)
   lessons    Lesson[]
 
   @@unique([parcoursId, index])
@@ -127,6 +128,8 @@ model Lesson {
   type        LessonType
   durationMin Int
   content     Json
+  completion  Json? // CompletionRule (achèvement d'activité §13.x)
+  access      Json? // AccessRule (restriction d'accès §13.x)
   progress    LessonProgress[]
   submissions Submission[]
 
@@ -169,6 +172,8 @@ model LessonProgress {
   lesson      Lesson    @relation(fields: [lessonId], references: [id], onDelete: Cascade)
   completed   Boolean   @default(false)
   completedAt DateTime?
+  viewedAt    DateTime? // 1ʳᵉ ouverture (condition d'achèvement « vue »)
+  score       Int? // meilleure note auto-corrigée 0..100 (conditions « note »/« réussite »)
 
   @@unique([userId, lessonId])
 }
