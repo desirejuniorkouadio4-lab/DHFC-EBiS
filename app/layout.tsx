@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
+import "katex/dist/katex.min.css";
+import "highlight.js/styles/atom-one-dark.css";
 import { AnnouncementBanner } from "@/components/layout/announcement-banner";
 
 const inter = Inter({

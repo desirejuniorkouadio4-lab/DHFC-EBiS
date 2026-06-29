@@ -37,6 +37,7 @@ export default async function EditLessonPage({
         initialDuration={lesson.durationMin}
         initialContent={lesson.content}
         backHref={`/concepteur/${slug}`}
+        blobEnabled={!!process.env.BLOB_READ_WRITE_TOKEN}
       />
     </div>
   );

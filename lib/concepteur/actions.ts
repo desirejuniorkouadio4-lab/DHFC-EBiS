@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth-helpers";
 import type { Level, LessonType } from "@prisma/client";
 import type { QuizContent } from "@/lib/exercices/types";
+import type { BlocksContent } from "@/lib/blocks/types";
 import { deletePublicFile } from "@/lib/storage/blob";
 
 function isStoredUrl(url: string): boolean {
@@ -52,7 +53,7 @@ const VALID_TYPES: LessonType[] = ["VIDEO", "TEXTE", "QUIZ"];
 function defaultContent(type: LessonType) {
   if (type === "VIDEO") return { kind: "video", intro: "", chapters: [], transcript: "" };
   if (type === "QUIZ") return { kind: "quiz", intro: "", passScore: 60, exercices: [] };
-  return { kind: "texte", sections: [{ heading: "Introduction", body: [""] }] };
+  return { kind: "blocks", blocks: [] };
 }
 
 /* ============================================================
@@ -313,6 +314,7 @@ export async function moveLesson(lessonId: string, dir: "up" | "down"): Promise<
 export type LessonContentInput =
   | { kind: "video"; intro: string; chapters: { time: string; label: string }[]; transcript: string }
   | { kind: "texte"; sections: { heading: string; body: string[] }[] }
+  | BlocksContent
   | QuizContent;
 
 export async function updateLesson(

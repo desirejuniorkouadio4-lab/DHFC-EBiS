@@ -28,6 +28,8 @@ import { ExercicePlayer, type SubmissionView } from "@/components/exercices/play
 import { normalizeQuizContent } from "@/lib/exercices/legacy";
 import { emptyAnswer, isManualType, type Exercice } from "@/lib/exercices/types";
 import { gradeQuiz } from "@/lib/exercices/grade";
+import { BlockRenderer } from "@/components/blocks/block-renderer";
+import { normalizeBlocks } from "@/lib/blocks/types";
 import { cn } from "@/lib/utils";
 
 const TYPE_ICON: Record<LessonType, typeof PlayCircle> = {
@@ -395,10 +397,11 @@ function LessonContent({
 
       <div className="mt-6">
         {lesson.content.kind === "video" && <VideoView lesson={lesson} />}
-        {lesson.content.kind === "texte" && <TexteView lesson={lesson} />}
-        {lesson.content.kind === "quiz" && (
+        {lesson.content.kind === "quiz" ? (
           <QuizView lesson={lesson} onPass={onPassQuiz} slug={slug} lessonId={lesson.id} submissions={submissions} blobEnabled={blobEnabled} />
-        )}
+        ) : lesson.content.kind !== "video" ? (
+          <TexteView lesson={lesson} />
+        ) : null}
       </div>
     </div>
   );
@@ -449,19 +452,10 @@ function VideoView({ lesson }: { lesson: Lesson }) {
 }
 
 function TexteView({ lesson }: { lesson: Lesson }) {
-  if (lesson.content.kind !== "texte") return null;
+  const blocks = normalizeBlocks(lesson.content).blocks;
   return (
-    <article className="space-y-6">
-      {lesson.content.sections.map((s) => (
-        <section key={s.heading}>
-          <h2 className="text-xl font-bold">{s.heading}</h2>
-          {s.body.map((p, i) => (
-            <p key={i} className="mt-2 leading-relaxed text-[var(--text-secondary)]">
-              {p}
-            </p>
-          ))}
-        </section>
-      ))}
+    <article>
+      <BlockRenderer blocks={blocks} />
     </article>
   );
 }

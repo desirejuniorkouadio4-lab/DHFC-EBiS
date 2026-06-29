@@ -8,6 +8,8 @@ import { updateLesson, type LessonContentInput } from "@/lib/concepteur/actions"
 import { ExercicesBuilder } from "@/components/exercices/builder";
 import { normalizeQuizContent } from "@/lib/exercices/legacy";
 import type { QuizContent } from "@/lib/exercices/types";
+import { BlockEditor } from "@/components/concepteur/block-editor";
+import { normalizeBlocks, type Block } from "@/lib/blocks/types";
 import { cn } from "@/lib/utils";
 
 const inputClass =
@@ -16,7 +18,6 @@ const textareaClass =
   "w-full resize-y rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-3.5 text-sm outline-none transition-colors focus:border-orange-500 focus:ring-2 focus:ring-orange-500/20";
 const labelClass = "text-sm font-medium";
 
-type Section = { heading: string; bodyText: string };
 type Chapter = { time: string; label: string };
 
 type Content = Record<string, unknown>;
@@ -33,6 +34,7 @@ export function LessonEditor({
   initialDuration,
   initialContent,
   backHref,
+  blobEnabled,
 }: {
   lessonId: string;
   initialTitle: string;
@@ -40,6 +42,7 @@ export function LessonEditor({
   initialDuration: number;
   initialContent: unknown;
   backHref: string;
+  blobEnabled: boolean;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -49,13 +52,8 @@ export function LessonEditor({
   const [type, setType] = useState<LessonType>(initialType);
   const [duration, setDuration] = useState(initialDuration);
 
-  // Lecture (texte)
-  const [sections, setSections] = useState<Section[]>(() => {
-    const arr = Array.isArray(c.sections) ? (c.sections as { heading?: string; body?: string[] }[]) : [];
-    return arr.length
-      ? arr.map((s) => ({ heading: s.heading ?? "", bodyText: (s.body ?? []).join("\n\n") }))
-      : [{ heading: "Introduction", bodyText: "" }];
-  });
+  // Lecture (blocs de contenu) — normalise l'ancien format au chargement.
+  const [blocks, setBlocks] = useState<Block[]>(() => normalizeBlocks(initialContent).blocks);
 
   // Vidéo
   const [videoIntro, setVideoIntro] = useState(typeof c.intro === "string" && c.kind === "video" ? c.intro : "");
@@ -80,13 +78,7 @@ export function LessonEditor({
     if (type === "QUIZ") {
       return { ...quiz, intro: quiz.intro.trim() };
     }
-    return {
-      kind: "texte",
-      sections: sections.map((s) => ({
-        heading: s.heading.trim() || "Section",
-        body: s.bodyText.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean),
-      })),
-    };
+    return { kind: "blocks", blocks };
   }
 
   function save() {
@@ -159,9 +151,7 @@ export function LessonEditor({
       <section className="rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-6">
         <h2 className="mb-4 font-bold">Contenu</h2>
 
-        {type === "TEXTE" && (
-          <TexteEditor sections={sections} setSections={setSections} />
-        )}
+        {type === "TEXTE" && <BlockEditor value={blocks} onChange={setBlocks} blobEnabled={blobEnabled} />}
         {type === "VIDEO" && (
           <VideoEditor
             intro={videoIntro}
@@ -201,58 +191,6 @@ export function LessonEditor({
           )}
         </button>
       </div>
-    </div>
-  );
-}
-
-/* ---------------- Lecture ---------------- */
-function TexteEditor({
-  sections,
-  setSections,
-}: {
-  sections: Section[];
-  setSections: React.Dispatch<React.SetStateAction<Section[]>>;
-}) {
-  return (
-    <div className="space-y-4">
-      {sections.map((s, i) => (
-        <div key={i} className="rounded-2xl border border-[var(--border-subtle)] p-4">
-          <div className="flex items-center gap-2">
-            <input
-              value={s.heading}
-              onChange={(e) =>
-                setSections((arr) => arr.map((x, j) => (j === i ? { ...x, heading: e.target.value } : x)))
-              }
-              placeholder="Titre de la section"
-              className={inputClass}
-            />
-            <button
-              type="button"
-              onClick={() => setSections((arr) => arr.filter((_, j) => j !== i))}
-              aria-label="Supprimer la section"
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-[var(--border-subtle)] text-[var(--text-secondary)] transition-colors hover:border-red-300 hover:text-red-600"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          </div>
-          <textarea
-            value={s.bodyText}
-            onChange={(e) =>
-              setSections((arr) => arr.map((x, j) => (j === i ? { ...x, bodyText: e.target.value } : x)))
-            }
-            rows={4}
-            placeholder="Contenu de la section (séparez les paragraphes par une ligne vide)."
-            className={cn(textareaClass, "mt-2")}
-          />
-        </div>
-      ))}
-      <button
-        type="button"
-        onClick={() => setSections((arr) => [...arr, { heading: "", bodyText: "" }])}
-        className="inline-flex h-10 items-center gap-2 rounded-full border border-dashed border-[var(--border-subtle)] px-4 text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:border-orange-400 hover:text-orange-600"
-      >
-        <Plus className="h-4 w-4" /> Ajouter une section
-      </button>
     </div>
   );
 }

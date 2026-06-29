@@ -298,3 +298,72 @@
     -webkit-tap-highlight-color: transparent;
   }
 }
+
+/* ============================================================
+ *  Rendu Markdown des blocs de contenu (éditeur riche §17.2)
+ * ============================================================ */
+.prose-dhfc {
+  color: var(--text-secondary);
+  line-height: 1.7;
+  font-size: 0.95rem;
+}
+.prose-dhfc > :first-child { margin-top: 0; }
+.prose-dhfc > :last-child { margin-bottom: 0; }
+.prose-dhfc h1,
+.prose-dhfc h2,
+.prose-dhfc h3,
+.prose-dhfc h4 {
+  color: var(--text-primary);
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 1.4em 0 0.5em;
+}
+.prose-dhfc h1 { font-size: 1.5rem; }
+.prose-dhfc h2 { font-size: 1.25rem; }
+.prose-dhfc h3 { font-size: 1.1rem; }
+.prose-dhfc p { margin: 0.75em 0; }
+.prose-dhfc a { color: #e67e00; text-decoration: underline; text-underline-offset: 2px; }
+.prose-dhfc strong { color: var(--text-primary); font-weight: 700; }
+.prose-dhfc ul,
+.prose-dhfc ol { margin: 0.75em 0; padding-left: 1.4em; }
+.prose-dhfc li { margin: 0.3em 0; }
+.prose-dhfc ul { list-style: disc; }
+.prose-dhfc ol { list-style: decimal; }
+.prose-dhfc blockquote {
+  border-left: 3px solid #F39200;
+  padding-left: 1em;
+  margin: 1em 0;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+.prose-dhfc code:not(pre code) {
+  background: var(--bg-secondary);
+  padding: 0.15em 0.4em;
+  border-radius: 0.35rem;
+  font-size: 0.875em;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+}
+.prose-dhfc pre {
+  margin: 1em 0;
+  padding: 1em;
+  border-radius: 0.75rem;
+  overflow-x: auto;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+.prose-dhfc pre code { font-family: ui-monospace, "SF Mono", Menlo, monospace; }
+.prose-dhfc table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+  font-size: 0.9em;
+}
+.prose-dhfc th,
+.prose-dhfc td {
+  border: 1px solid var(--border-subtle);
+  padding: 0.5em 0.75em;
+  text-align: left;
+}
+.prose-dhfc th { background: var(--bg-secondary); font-weight: 600; color: var(--text-primary); }
+.prose-dhfc img { max-width: 100%; border-radius: 0.5rem; }
+.prose-dhfc hr { border: 0; border-top: 1px solid var(--border-subtle); margin: 1.5em 0; }
