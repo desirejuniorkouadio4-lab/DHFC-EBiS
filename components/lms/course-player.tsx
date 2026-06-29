@@ -45,12 +45,14 @@ export function CoursePlayer({
   curriculum,
   initialCompleted,
   submissions = {},
+  blobEnabled = false,
 }: {
   slug: string;
   lessonId: string;
   curriculum: Curriculum;
   initialCompleted: string[];
   submissions?: Record<string, SubmissionView>;
+  blobEnabled?: boolean;
 }) {
   const [completed, setCompleted] = useState<Set<string>>(() => new Set(initialCompleted));
   const [, startTransition] = useTransition();
@@ -182,7 +184,7 @@ export function CoursePlayer({
         {/* Contenu */}
         <main className="min-w-0 flex-1 px-4 py-6 pb-28 sm:px-8 sm:py-8 lg:pb-8">
           <div className="mx-auto max-w-3xl">
-            <LessonContent lesson={lesson} onPassQuiz={() => markDone(lesson.id)} slug={slug} submissions={submissions} />
+            <LessonContent lesson={lesson} onPassQuiz={() => markDone(lesson.id)} slug={slug} submissions={submissions} blobEnabled={blobEnabled} />
 
             {/* Onglets */}
             <div className="mt-8">
@@ -376,11 +378,13 @@ function LessonContent({
   onPassQuiz,
   slug,
   submissions,
+  blobEnabled,
 }: {
   lesson: Lesson;
   onPassQuiz: () => void;
   slug: string;
   submissions: Record<string, SubmissionView>;
+  blobEnabled: boolean;
 }) {
   return (
     <div>
@@ -393,7 +397,7 @@ function LessonContent({
         {lesson.content.kind === "video" && <VideoView lesson={lesson} />}
         {lesson.content.kind === "texte" && <TexteView lesson={lesson} />}
         {lesson.content.kind === "quiz" && (
-          <QuizView lesson={lesson} onPass={onPassQuiz} slug={slug} lessonId={lesson.id} submissions={submissions} />
+          <QuizView lesson={lesson} onPass={onPassQuiz} slug={slug} lessonId={lesson.id} submissions={submissions} blobEnabled={blobEnabled} />
         )}
       </div>
     </div>
@@ -468,12 +472,14 @@ function QuizView({
   slug,
   lessonId,
   submissions,
+  blobEnabled,
 }: {
   lesson: Lesson;
   onPass: () => void;
   slug: string;
   lessonId: string;
   submissions: Record<string, SubmissionView>;
+  blobEnabled: boolean;
 }) {
   const [quiz] = useState(() => normalizeQuizContent(lesson.content));
   const initAnswers = () => {
@@ -551,6 +557,7 @@ function QuizView({
                   submission={submissions[ex.id]}
                   slug={slug}
                   lessonId={lessonId}
+                  blobEnabled={blobEnabled}
                 />
               </div>
               {submitted && res && ex.feedback && (

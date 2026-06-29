@@ -6,9 +6,11 @@ import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth-helpers";
 import type { Level, LessonType } from "@prisma/client";
 import type { QuizContent } from "@/lib/exercices/types";
-import { uploadPublicFile, deletePublicFile, fileToBuffer } from "@/lib/storage/blob";
+import { deletePublicFile } from "@/lib/storage/blob";
 
-const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp", "image/avif"];
+function isStoredUrl(url: string): boolean {
+  return /^(https?:\/\/|\/uploads\/)/.test(url);
+}
 
 /** Garde commune : seuls concepteur/admin accèdent à ces mutations. */
 async function guard() {
@@ -112,17 +114,15 @@ export async function updateParcoursMeta(parcoursId: string, formData: FormData)
   revalidatePath("/concepteur");
 }
 
-export async function uploadParcoursCover(parcoursId: string, formData: FormData): Promise<void> {
+/** Enregistre l'URL de couverture (fichier déjà téléversé côté client). */
+export async function setParcoursCover(parcoursId: string, data: { url: string }): Promise<void> {
   await guard();
-  const file = formData.get("cover");
-  if (!(file instanceof File) || file.size === 0) return;
+  if (!data?.url || !isStoredUrl(data.url)) return;
   const parcours = await prisma.parcours.findUnique({ where: { id: parcoursId }, select: { slug: true, coverUrl: true } });
   if (!parcours) return;
 
-  const { buffer, contentType, name } = await fileToBuffer(file, { accept: IMAGE_TYPES, maxBytes: 5 * 1024 * 1024 });
-  const { url } = await uploadPublicFile("covers", name, buffer, contentType);
-  if (parcours.coverUrl) await deletePublicFile(parcours.coverUrl);
-  await prisma.parcours.update({ where: { id: parcoursId }, data: { coverUrl: url } });
+  if (parcours.coverUrl && parcours.coverUrl !== data.url) await deletePublicFile(parcours.coverUrl);
+  await prisma.parcours.update({ where: { id: parcoursId }, data: { coverUrl: data.url } });
 
   revalidatePath(`/concepteur/${parcours.slug}`);
   revalidatePath("/parcours");

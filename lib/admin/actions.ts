@@ -5,9 +5,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth-helpers";
 import type { Role } from "@prisma/client";
-import { uploadPublicFile, deletePublicFile, fileToBuffer } from "@/lib/storage/blob";
-
-const MEDIA_TYPES = ["image/jpeg", "image/png", "image/webp", "image/avif", "image/gif", "application/pdf"];
+import { deletePublicFile } from "@/lib/storage/blob";
 
 const ROLES: Role[] = ["APPRENANT", "TUTEUR", "ENCADREUR", "CONCEPTEUR", "ADMIN", "SUPERADMIN"];
 
@@ -57,16 +55,18 @@ export async function assignCohortTutor(cohortId: string, formData: FormData): P
   revalidatePath("/admin/cohortes");
 }
 
-/** Téléverse un média dans la médiathèque (§17.5). */
-export async function uploadMedia(formData: FormData): Promise<void> {
+/** Enregistre un média (fichier déjà téléversé côté client) dans la médiathèque (§17.5). */
+export async function addMedia(data: { url: string; filename: string; contentType: string; size: number }): Promise<void> {
   const actor = await requireRole(["ADMIN", "SUPERADMIN"]);
-  const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) return;
-
-  const { buffer, contentType, name } = await fileToBuffer(file, { accept: MEDIA_TYPES });
-  const { url, size } = await uploadPublicFile("media", name, buffer, contentType);
+  if (!data?.url || !/^(https?:\/\/|\/uploads\/)/.test(data.url)) return;
   await prisma.media.create({
-    data: { url, filename: name, contentType, size, uploadedById: actor.id },
+    data: {
+      url: data.url,
+      filename: (data.filename || "fichier").slice(0, 200),
+      contentType: data.contentType || "application/octet-stream",
+      size: data.size || 0,
+      uploadedById: actor.id,
+    },
   });
   revalidatePath("/admin/media");
 }

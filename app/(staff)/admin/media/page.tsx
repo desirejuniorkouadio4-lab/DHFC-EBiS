@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { ArrowLeft, Upload, Trash2, FileText, Image as ImageIcon, Inbox } from "lucide-react";
+import { ArrowLeft, Trash2, FileText, Image as ImageIcon, Inbox } from "lucide-react";
 import { requireRole } from "@/lib/auth-helpers";
 import { listMedia } from "@/lib/admin/db";
-import { uploadMedia, deleteMedia } from "@/lib/admin/actions";
-import { SubmitButton, IconSubmit } from "@/components/concepteur/submit-button";
+import { addMedia, deleteMedia } from "@/lib/admin/actions";
+import { IconSubmit } from "@/components/concepteur/submit-button";
 import { CopyButton } from "@/components/admin/copy-button";
+import { Uploader } from "@/components/upload/uploader";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,7 @@ export default async function AdminMediaPage() {
   await requireRole(["ADMIN", "SUPERADMIN"]);
   const media = await listMedia();
   const totalSize = media.reduce((a, m) => a + m.size, 0);
+  const blobEnabled = !!process.env.BLOB_READ_WRITE_TOKEN;
 
   return (
     <div className="space-y-6">
@@ -35,21 +37,13 @@ export default async function AdminMediaPage() {
       </div>
 
       {/* Téléversement */}
-      <form
-        action={uploadMedia}
-        className="flex flex-col gap-3 rounded-3xl border border-dashed border-[var(--border-subtle)] p-4 sm:flex-row sm:items-center"
-      >
-        <input
-          type="file"
-          name="file"
-          required
-          accept="image/png,image/jpeg,image/webp,image/avif,image/gif,application/pdf"
-          className="min-w-0 flex-1 text-sm text-[var(--text-secondary)] file:mr-3 file:rounded-full file:border-0 file:bg-[var(--bg-secondary)] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-[var(--text-primary)] hover:file:bg-[var(--border-subtle)]"
-        />
-        <SubmitButton pendingLabel="Envoi…" className="px-5">
-          <Upload className="h-4 w-4" /> Téléverser
-        </SubmitButton>
-      </form>
+      <Uploader
+        blobEnabled={blobEnabled}
+        prefix="media"
+        accept="image/png,image/jpeg,image/webp,image/avif,image/gif,application/pdf"
+        hint="Images ou PDF — 8 Mo max. Glissez-déposez ou cliquez."
+        onUploaded={addMedia}
+      />
 
       {media.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-[var(--border-subtle)] p-12 text-center">

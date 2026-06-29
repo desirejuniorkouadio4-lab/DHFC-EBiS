@@ -29,6 +29,7 @@ export default async function LessonPage({
       curriculum={curriculum}
       initialCompleted={completed}
       submissions={submissions}
+      blobEnabled={!!process.env.BLOB_READ_WRITE_TOKEN}
     />
   );
 }

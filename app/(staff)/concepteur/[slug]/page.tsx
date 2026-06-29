@@ -19,13 +19,12 @@ import {
   Layers,
   Users,
   Image as ImageIcon,
-  Upload,
 } from "lucide-react";
 import { requireRole } from "@/lib/auth-helpers";
 import { getParcoursForEdit, listDisciplines } from "@/lib/concepteur/db";
 import {
   updateParcoursMeta,
-  uploadParcoursCover,
+  setParcoursCover,
   removeParcoursCover,
   togglePublish,
   deleteParcours,
@@ -38,6 +37,7 @@ import {
   moveLesson,
 } from "@/lib/concepteur/actions";
 import { SubmitButton, IconSubmit } from "@/components/concepteur/submit-button";
+import { Uploader } from "@/components/upload/uploader";
 import type { LessonType } from "@prisma/client";
 
 export const dynamic = "force-dynamic";
@@ -61,6 +61,7 @@ export default async function EditParcoursPage({ params }: { params: Promise<{ s
 
   const totalLessons = parcours.modules.reduce((acc, m) => acc + m.lessons.length, 0);
   const canDelete = parcours.enrolledCount === 0 && !parcours.published;
+  const blobEnabled = !!process.env.BLOB_READ_WRITE_TOKEN;
 
   return (
     <div className="space-y-8">
@@ -146,19 +147,16 @@ export default async function EditParcoursPage({ params }: { params: Promise<{ s
                 <ImageIcon className="h-8 w-8 text-[var(--text-secondary)]" />
               )}
             </div>
-            <div className="space-y-2">
-              <form action={uploadParcoursCover.bind(null, parcours.id)} className="flex flex-wrap items-center gap-2">
-                <input
-                  type="file"
-                  name="cover"
-                  accept="image/png,image/jpeg,image/webp,image/avif"
-                  required
-                  className="max-w-full text-sm text-[var(--text-secondary)] file:mr-3 file:rounded-full file:border-0 file:bg-[var(--bg-secondary)] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-[var(--text-primary)] hover:file:bg-[var(--border-subtle)]"
-                />
-                <SubmitButton variant="ghost" pendingLabel="Envoi…" className="h-10">
-                  <Upload className="h-4 w-4" /> Téléverser
-                </SubmitButton>
-              </form>
+            <div className="flex-1 space-y-2">
+              <Uploader
+                blobEnabled={blobEnabled}
+                prefix="covers"
+                accept="image/png,image/jpeg,image/webp,image/avif"
+                maxMb={5}
+                hint="JPG, PNG, WebP ou AVIF — 5 Mo max."
+                compact
+                onUploaded={setParcoursCover.bind(null, parcours.id)}
+              />
               {parcours.coverUrl && (
                 <form action={removeParcoursCover.bind(null, parcours.id)}>
                   <SubmitButton variant="subtle" pendingLabel="…" className="h-9 text-xs">
@@ -166,7 +164,6 @@ export default async function EditParcoursPage({ params }: { params: Promise<{ s
                   </SubmitButton>
                 </form>
               )}
-              <p className="text-xs text-[var(--text-secondary)]">JPG, PNG, WebP ou AVIF — 5 Mo max.</p>
             </div>
           </div>
         </div>

@@ -1,10 +1,10 @@
 "use client";
 
-import { CheckCircle2, XCircle, ArrowUp, ArrowDown, Clock, Award, Paperclip, Download, Upload } from "lucide-react";
+import { CheckCircle2, XCircle, ArrowUp, ArrowDown, Clock, Award, Paperclip, Download } from "lucide-react";
 import type { Exercice } from "@/lib/exercices/types";
 import type { GradeResult } from "@/lib/exercices/grade";
-import { submitAssignmentFile } from "@/lib/lms/actions";
-import { SubmitButton } from "@/components/concepteur/submit-button";
+import { submitAssignmentUrl } from "@/lib/lms/actions";
+import { Uploader } from "@/components/upload/uploader";
 import { cn } from "@/lib/utils";
 
 export type SubmissionView = {
@@ -24,6 +24,7 @@ type PlayerProps<T extends Exercice = Exercice> = {
   submission?: SubmissionView;
   slug?: string;
   lessonId?: string;
+  blobEnabled?: boolean;
 };
 
 /** Player d'exercice (apprenant) — dispatcher par type, feedback instantané. */
@@ -58,7 +59,7 @@ function fileLabel(url: string): string {
   return last.replace(/^[a-z0-9]+-[a-z0-9]+-/, "");
 }
 
-function DepotFichierPlayer({ exercice, submission, slug, lessonId }: PlayerProps<Extract<Exercice, { type: "DEPOT_FICHIER" }>>) {
+function DepotFichierPlayer({ exercice, submission, slug, lessonId, blobEnabled }: PlayerProps<Extract<Exercice, { type: "DEPOT_FICHIER" }>>) {
   // Déjà corrigé.
   if (submission?.status === "GRADED") {
     return (
@@ -91,23 +92,15 @@ function DepotFichierPlayer({ exercice, submission, slug, lessonId }: PlayerProp
   // Dépôt.
   if (!slug || !lessonId) return null;
   return (
-    <form
-      action={submitAssignmentFile.bind(null, slug, lessonId, exercice.id, exercice.prompt)}
-      className="flex flex-col gap-3 rounded-xl border border-dashed border-[var(--border-subtle)] p-4 sm:flex-row sm:items-center"
-    >
-      <input
-        type="file"
-        name="file"
-        required
-        className="min-w-0 flex-1 text-sm text-[var(--text-secondary)] file:mr-3 file:rounded-full file:border-0 file:bg-[var(--bg-secondary)] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-[var(--text-primary)] hover:file:bg-[var(--border-subtle)]"
-      />
-      <SubmitButton pendingLabel="Dépôt…" className="shrink-0">
-        <Upload className="h-4 w-4" /> Déposer
-      </SubmitButton>
-      <p className="text-xs text-[var(--text-secondary)] sm:hidden">
-        {exercice.data.acceptHint} · {exercice.data.maxMb} Mo max
-      </p>
-    </form>
+    <Uploader
+      blobEnabled={blobEnabled ?? false}
+      prefix="devoirs"
+      accept="application/pdf,image/png,image/jpeg,image/webp"
+      maxMb={exercice.data.maxMb || 8}
+      hint={`${exercice.data.acceptHint} · ${exercice.data.maxMb} Mo max`}
+      compact
+      onUploaded={submitAssignmentUrl.bind(null, slug, lessonId, exercice.id, exercice.prompt)}
+    />
   );
 }
 

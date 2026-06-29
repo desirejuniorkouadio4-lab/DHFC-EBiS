@@ -4,7 +4,6 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { issueCertificateIfComplete } from "@/lib/certificates/issue";
-import { uploadPublicFile, fileToBuffer } from "@/lib/storage/blob";
 
 /** Recalcule et enregistre le pourcentage de progression d'une inscription. */
 async function syncEnrollmentProgress(userId: string, slug: string) {
@@ -97,22 +96,17 @@ export async function submitEssays(
  * Dépose le fichier d'un exercice « dépôt de devoir » (file de correction tuteur).
  * N'écrase pas un dépôt existant.
  */
-export async function submitAssignmentFile(
+export async function submitAssignmentUrl(
   slug: string,
   lessonId: string,
   exerciceId: string,
   prompt: string,
-  formData: FormData
+  data: { url: string }
 ): Promise<void> {
   const session = await auth();
   if (!session?.user?.id) return;
   const userId = session.user.id;
-
-  const file = formData.get("file");
-  if (!(file instanceof File) || file.size === 0) return;
-
-  const { buffer, contentType, name } = await fileToBuffer(file, { maxBytes: 8 * 1024 * 1024 });
-  const { url } = await uploadPublicFile("devoirs", name, buffer, contentType);
+  if (!data?.url || !/^(https?:\/\/|\/uploads\/)/.test(data.url)) return;
 
   const enrollment = await prisma.enrollment.findFirst({
     where: { userId, parcours: { slug } },
@@ -127,7 +121,7 @@ export async function submitAssignmentFile(
       lessonId,
       exerciceId,
       prompt: prompt.slice(0, 1000),
-      answer: url,
+      answer: data.url,
       cohortId: enrollment?.cohortId ?? null,
       status: "PENDING",
     },

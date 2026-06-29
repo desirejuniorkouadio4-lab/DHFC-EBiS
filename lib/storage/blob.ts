@@ -43,7 +43,11 @@ export async function uploadPublicFile(
     return { url, size: data.byteLength };
   }
 
-  // Repli développement : écrit sous public/uploads (gitignored).
+  // Repli développement uniquement : écrit sous public/uploads (gitignored).
+  // En production, le système de fichiers est en lecture seule → Blob obligatoire.
+  if (process.env.NODE_ENV === "production") {
+    throw new Error("Stockage de fichiers non configuré (BLOB_READ_WRITE_TOKEN manquant).");
+  }
   const rel = `uploads/${key}`;
   const abs = path.join(process.cwd(), "public", rel);
   await fs.mkdir(path.dirname(abs), { recursive: true });
