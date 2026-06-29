@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { issueCertificateIfComplete } from "@/lib/certificates/issue";
 
 /** Recalcule et enregistre le pourcentage de progression d'une inscription. */
 async function syncEnrollmentProgress(userId: string, slug: string) {
@@ -41,10 +42,12 @@ export async function toggleLessonComplete(slug: string, lessonId: string) {
     create: { userId, lessonId, completed: nowCompleted, completedAt: nowCompleted ? new Date() : null },
   });
 
-  await syncEnrollmentProgress(userId, slug);
+  const percent = await syncEnrollmentProgress(userId, slug);
+  if (percent >= 100) await issueCertificateIfComplete(userId, slug);
 
   revalidatePath("/tableau-de-bord");
   revalidatePath("/mes-parcours");
+  revalidatePath("/certificats");
   revalidatePath(`/apprendre/${slug}`, "layout");
 
   return { ok: true, completed: nowCompleted };
@@ -101,8 +104,10 @@ export async function markLessonComplete(slug: string, lessonId: string) {
     create: { userId, lessonId, completed: true, completedAt: new Date() },
   });
 
-  await syncEnrollmentProgress(userId, slug);
+  const percent = await syncEnrollmentProgress(userId, slug);
+  if (percent >= 100) await issueCertificateIfComplete(userId, slug);
   revalidatePath("/tableau-de-bord");
   revalidatePath("/mes-parcours");
+  revalidatePath("/certificats");
   return { ok: true };
 }

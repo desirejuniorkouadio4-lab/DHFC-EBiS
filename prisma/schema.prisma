@@ -196,7 +196,10 @@ model Certificate {
   parcoursId String
   parcours   Parcours @relation(fields: [parcoursId], references: [id])
   score      Int
+  pdfUrl     String? // URL stable du PDF (Vercel Blob), généré à la demande
   issuedAt   DateTime @default(now())
+
+  @@unique([userId, parcoursId])
 }
 
 enum SubmissionStatus {

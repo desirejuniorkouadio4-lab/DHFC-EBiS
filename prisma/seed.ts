@@ -245,7 +245,7 @@ async function main() {
   const earnedBadges = await prisma.badge.findMany({ where: { slug: { in: ["premier-pas", "streak-7", "quiz-parfait", "entraide", "diplome"] } } });
   for (const b of earnedBadges) await prisma.userBadge.create({ data: { userId: user.id, badgeId: b.id } });
   await enrollLearner(user.id, "experimentation-physique-chimie", cohortPCSVT.id, 45, 0);
-  await enrollLearner(user.id, "vivant-environnement-svt", cohortPCSVT.id, 80, 0);
+  await enrollLearner(user.id, "vivant-environnement-svt", cohortPCSVT.id, 100, 2);
   await enrollLearner(user.id, "evaluer-par-competences", cohortTransversal.id, 15, 1);
 
   // --- Cohortes garnies : autres apprenants pour le suivi tuteur ---
@@ -268,6 +268,25 @@ async function main() {
     await enrollLearner(lu.id, l.slug, l.cohort, l.baseline, l.days);
   }
 
+  // --- Certificats : délivrés pour chaque parcours terminé (100 %) ---
+  const completed = await prisma.enrollment.findMany({
+    where: { progress: { gte: 100 } },
+    select: { userId: true, parcoursId: true, enrolledAt: true },
+  });
+  let certSeq = 0;
+  for (const e of completed) {
+    const code = `DHFC-26-${(certSeq++).toString(36).toUpperCase().padStart(2, "0")}${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+    await prisma.certificate.create({
+      data: {
+        userId: e.userId,
+        parcoursId: e.parcoursId,
+        code,
+        score: 85 + Math.floor(Math.random() * 11), // 85–95
+        issuedAt: new Date(Date.now() - 3 * 86400000),
+      },
+    });
+  }
+
   // --- Récap ---
   const counts = {
     disciplines: await prisma.discipline.count(),
@@ -281,6 +300,7 @@ async function main() {
     users: await prisma.user.count(),
     enrollments: await prisma.enrollment.count(),
     lessonProgress: await prisma.lessonProgress.count(),
+    certificates: await prisma.certificate.count(),
   };
   console.log("✅ Seed terminé :", counts);
 }
