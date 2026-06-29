@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Plus, PencilRuler, Layers, BookOpen, Users, Pencil, CheckCircle2, FileEdit } from "lucide-react";
+import { Plus, PencilRuler, Layers, BookOpen, Users, Pencil, CheckCircle2, FileEdit, Library } from "lucide-react";
 import { requireRole } from "@/lib/auth-helpers";
 import { listParcoursForConcepteur } from "@/lib/concepteur/db";
 
@@ -32,12 +32,20 @@ export default async function ConcepteurPage() {
             </p>
           </div>
         </div>
-        <Link
-          href="/concepteur/nouveau"
-          className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-full bg-orange-500 px-5 text-sm font-semibold text-white shadow-brand transition-colors hover:bg-orange-600"
-        >
-          <Plus className="h-4 w-4" /> Nouveau parcours
-        </Link>
+        <div className="flex shrink-0 items-center gap-2">
+          <Link
+            href="/concepteur/banque"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-[var(--border-subtle)] px-5 text-sm font-semibold transition-colors hover:border-orange-400 hover:text-orange-600"
+          >
+            <Library className="h-4 w-4" /> Banque de questions
+          </Link>
+          <Link
+            href="/concepteur/nouveau"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-orange-500 px-5 text-sm font-semibold text-white shadow-brand transition-colors hover:bg-orange-600"
+          >
+            <Plus className="h-4 w-4" /> Nouveau parcours
+          </Link>
+        </div>
       </div>
 
       {/* Indicateurs */}

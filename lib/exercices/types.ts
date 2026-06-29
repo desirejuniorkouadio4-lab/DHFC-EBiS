@@ -186,6 +186,17 @@ export function createExercice(type: ExerciceType): Exercice {
   }
 }
 
+/**
+ * Copie un exercice pour l'importer dans un quiz (banque de questions §13.6).
+ * Régénère l'identifiant de tête (unicité dans le quiz) ; les ids imbriqués
+ * (options, items, zones…) restent valides car scopés à l'exercice.
+ */
+export function cloneExerciceForImport(ex: Exercice): Exercice {
+  const copy = JSON.parse(JSON.stringify(ex)) as Exercice;
+  copy.id = uid();
+  return copy;
+}
+
 /** Réponse vide initiale pour un exercice (player). */
 export function emptyAnswer(ex: Exercice): unknown {
   switch (ex.type) {

@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Trash2, ArrowUp, ArrowDown, GripVertical } from "lucide-react";
+import { useState, useTransition } from "react";
+import { Plus, Trash2, ArrowUp, ArrowDown, GripVertical, Library, BookmarkPlus, Check } from "lucide-react";
 import {
   createExercice,
   uid,
@@ -16,6 +16,8 @@ import {
   type ImgTarget,
 } from "@/lib/exercices/types";
 import { Uploader } from "@/components/upload/uploader";
+import { BankPicker } from "@/components/banque/bank-picker";
+import { saveToBank } from "@/lib/banque/actions";
 import { cn } from "@/lib/utils";
 
 const inputClass =
@@ -34,8 +36,19 @@ export function ExercicesBuilder({
   blobEnabled?: boolean;
 }) {
   const [newType, setNewType] = useState<ExerciceType>("QCU");
+  const [picking, setPicking] = useState(false);
+  const [savedId, setSavedId] = useState<string | null>(null);
+  const [, startSave] = useTransition();
 
   const patch = (p: Partial<QuizContent>) => onChange({ ...value, ...p });
+  const saveExToBank = (ex: Exercice) =>
+    startSave(async () => {
+      const r = await saveToBank(ex);
+      if (r.ok) {
+        setSavedId(ex.id);
+        setTimeout(() => setSavedId((cur) => (cur === ex.id ? null : cur)), 2000);
+      }
+    });
   const updateEx = (updated: Exercice) =>
     patch({ exercices: value.exercices.map((e) => (e.id === updated.id ? updated : e)) });
   const removeEx = (id: string) => patch({ exercices: value.exercices.filter((e) => e.id !== id) });
@@ -129,6 +142,12 @@ export function ExercicesBuilder({
                   className={cn(smallInput, "w-14")}
                 />
               </label>
+              <IconBtn
+                label={savedId === ex.id ? "Enregistré dans la banque" : "Enregistrer dans la banque"}
+                onClick={() => saveExToBank(ex)}
+              >
+                {savedId === ex.id ? <Check className="h-4 w-4 text-green-500" /> : <BookmarkPlus className="h-4 w-4" />}
+              </IconBtn>
               <IconBtn label="Monter" onClick={() => moveEx(i, -1)} disabled={i === 0}>
                 <ArrowUp className="h-4 w-4" />
               </IconBtn>
@@ -177,7 +196,20 @@ export function ExercicesBuilder({
         >
           <Plus className="h-4 w-4" /> Ajouter
         </button>
+        <button
+          type="button"
+          onClick={() => setPicking(true)}
+          className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-full border border-[var(--border-subtle)] px-4 text-sm font-semibold transition-colors hover:border-orange-400 hover:text-orange-600"
+        >
+          <Library className="h-4 w-4" /> Banque
+        </button>
       </div>
+
+      <BankPicker
+        open={picking}
+        onClose={() => setPicking(false)}
+        onImport={(exs) => patch({ exercices: [...value.exercices, ...exs] })}
+      />
     </div>
   );
 }
@@ -203,7 +235,7 @@ function IconBtn({ children, label, danger, disabled, onClick }: { children: Rea
 /* ============================================================
  *  Configurateurs par type
  * ============================================================ */
-function ExerciceConfig({ ex, onUpdate, blobEnabled }: { ex: Exercice; onUpdate: (e: Exercice) => void; blobEnabled: boolean }) {
+export function ExerciceConfig({ ex, onUpdate, blobEnabled }: { ex: Exercice; onUpdate: (e: Exercice) => void; blobEnabled: boolean }) {
   switch (ex.type) {
     case "QCU":
       return <QCUConfig ex={ex} onUpdate={onUpdate} />;

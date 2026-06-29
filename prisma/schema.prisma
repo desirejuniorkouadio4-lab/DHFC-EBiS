@@ -328,6 +328,23 @@ model Setting {
   value String @db.Text
 }
 
+// Banque de questions (§13.6) : exercices réutilisables, importables dans les quiz.
+model BankQuestion {
+  id          String   @id @default(cuid())
+  label       String // libellé court (souvent l'énoncé) pour la liste et la recherche
+  type        String // ExerciceType
+  discipline  String? // filtre par discipline (nom court)
+  theme       String? // filtre thématique libre
+  data        Json // objet Exercice complet (ids régénérés à l'import)
+  createdById String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([type])
+  @@index([discipline])
+  @@index([createdAt])
+}
+
 model Actualite {
   id          String   @id @default(cuid())
   slug        String   @unique
