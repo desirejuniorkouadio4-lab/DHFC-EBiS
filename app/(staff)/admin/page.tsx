@@ -55,6 +55,7 @@ export default async function AdminPage() {
         <QuickLink href="/admin/cohortes" icon={GraduationCap} title="Cohortes" desc="Création et affectation des tuteurs." />
         <QuickLink href="/admin/media" icon={ImageIcon} title="Médiathèque" desc="Images et PDF réutilisables." />
         <QuickLink href="/concepteur" icon={PencilRuler} title="Contenus" desc="Parcours, modules, leçons et exercices." />
+        <QuickLink href="/admin/parametres" icon={Settings} title="Paramètres" desc="Annonce, maintenance, intégrations." />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">

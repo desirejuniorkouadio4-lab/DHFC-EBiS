@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireRole } from "@/lib/auth-helpers";
@@ -122,6 +122,22 @@ export async function importUsers(formData: FormData): Promise<void> {
   revalidatePath("/admin/utilisateurs");
   revalidatePath("/admin");
   redirect(`/admin/utilisateurs?created=${created}&skipped=${skipped}`);
+}
+
+/** Met à jour les paramètres système (§17.6). */
+export async function updateSiteSettings(formData: FormData): Promise<void> {
+  await requireRole(["ADMIN", "SUPERADMIN"]);
+  const entries: [string, string][] = [
+    ["announcementEnabled", formData.get("announcementEnabled") === "on" ? "true" : "false"],
+    ["announcementText", String(formData.get("announcementText") ?? "").slice(0, 300)],
+    ["maintenanceEnabled", formData.get("maintenanceEnabled") === "on" ? "true" : "false"],
+    ["maintenanceText", String(formData.get("maintenanceText") ?? "").slice(0, 300)],
+  ];
+  await prisma.$transaction(
+    entries.map(([key, value]) => prisma.setting.upsert({ where: { key }, update: { value }, create: { key, value } }))
+  );
+  revalidateTag("site-settings");
+  revalidatePath("/admin/parametres");
 }
 
 /** Enregistre un média (fichier déjà téléversé côté client) dans la médiathèque (§17.5). */

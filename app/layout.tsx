@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
+import { AnnouncementBanner } from "@/components/layout/announcement-banner";
 
 const inter = Inter({
   subsets: ["latin", "latin-ext"],
@@ -91,6 +92,7 @@ export default function RootLayout({
         >
           Aller au contenu principal
         </a>
+        <AnnouncementBanner />
         {children}
       </body>
     </html>

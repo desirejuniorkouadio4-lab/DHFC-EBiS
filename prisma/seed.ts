@@ -104,6 +104,7 @@ async function main() {
   await prisma.forumPost.deleteMany();
   await prisma.forumThread.deleteMany();
   await prisma.media.deleteMany();
+  await prisma.setting.deleteMany();
   await prisma.submission.deleteMany();
   await prisma.lessonProgress.deleteMany();
   await prisma.enrollment.deleteMany();

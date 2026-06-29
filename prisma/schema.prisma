@@ -322,6 +322,12 @@ model Media {
   @@index([createdAt])
 }
 
+// Paramètres système (§17.6) : stockage clé-valeur.
+model Setting {
+  key   String @id
+  value String @db.Text
+}
+
 model Actualite {
   id          String   @id @default(cuid())
   slug        String   @unique
