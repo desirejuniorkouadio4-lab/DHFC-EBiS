@@ -261,11 +261,44 @@ async function main() {
     { first: "Adjoua", last: "Kouamé", college: "Collège Moderne de Divo", region: "Lôh-Djiboua", slug: "experimentation-physique-chimie", cohort: cohortPCSVT.id, baseline: 72, days: 4 },
   ];
   let learnerSeq = 1;
+  let firstLearnerId = "";
   for (const l of learners) {
     const lu = await prisma.user.create({
       data: { email: `apprenant${learnerSeq++}@dhfc.dpfc.ci`, passwordHash: staffPassword, firstName: l.first, lastName: l.last, role: "APPRENANT", bivalence: "PC · SVT", region: l.region, dren: `DREN — ${l.region}`, college: l.college, xp: l.baseline * 12, level: 1 + Math.floor(l.baseline / 25), streak: l.days <= 1 ? 4 : 0 },
     });
+    if (!firstLearnerId) firstLearnerId = lu.id;
     await enrollLearner(lu.id, l.slug, l.cohort, l.baseline, l.days);
+  }
+
+  // --- Forums : discussions de démo ---
+  const t1 = await prisma.forumThread.create({
+    data: {
+      authorId: tutorId,
+      title: "Bienvenue sur les forums DHFC-EBiS 👋",
+      body: "Cet espace est dédié à l'entraide entre enseignants. Posez vos questions, partagez vos ressources et vos retours d'expérience. Restons bienveillants et constructifs !",
+      pinned: true,
+    },
+  });
+  await prisma.forumPost.create({
+    data: { threadId: t1.id, authorId: user.id, body: "Merci pour cet espace, hâte d'échanger avec la cohorte !" },
+  });
+
+  const pcPlus = await prisma.parcours.findUnique({ where: { slug: "experimentation-physique-chimie" }, select: { id: true } });
+  const t2 = await prisma.forumThread.create({
+    data: {
+      authorId: user.id,
+      parcoursId: pcPlus?.id ?? null,
+      title: "Matériel pour la démarche d'investigation en classe surchargée",
+      body: "Bonjour, comment organisez-vous les manipulations quand on a 50 élèves et peu de matériel ? Je cherche des idées de rotation par îlots.",
+    },
+  });
+  await prisma.forumPost.create({
+    data: { threadId: t2.id, authorId: tutorId, body: "Très bonne question. Je conseille des stations tournantes de 6-8 élèves avec une fiche de rôle. Je partage un modèle en visio cette semaine." },
+  });
+  if (firstLearnerId) {
+    await prisma.forumPost.create({
+      data: { threadId: t2.id, authorId: firstLearnerId, body: "De mon côté je filme une manip et les élèves analysent en groupe, ça aide quand le matériel manque." },
+    });
   }
 
   // --- Certificats : délivrés pour chaque parcours terminé (100 %) ---
@@ -301,6 +334,7 @@ async function main() {
     enrollments: await prisma.enrollment.count(),
     lessonProgress: await prisma.lessonProgress.count(),
     certificates: await prisma.certificate.count(),
+    forumThreads: await prisma.forumThread.count(),
   };
   console.log("✅ Seed terminé :", counts);
 }

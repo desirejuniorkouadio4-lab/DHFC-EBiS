@@ -70,6 +70,8 @@ model User {
   tutoredCohorts Cohort[]         @relation("TutorCohorts")
   submissions    Submission[]     @relation("UserSubmissions")
   gradedSubmissions Submission[]  @relation("GradedSubmissions")
+  forumThreads   ForumThread[]    @relation("ForumThreads")
+  forumPosts     ForumPost[]      @relation("ForumPosts")
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 }
@@ -96,6 +98,7 @@ model Parcours {
   modules       Module[]
   enrollments   Enrollment[]
   certificates  Certificate[]
+  forumThreads  ForumThread[]
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
@@ -234,6 +237,39 @@ model Submission {
   @@index([status])
   @@index([cohortId])
   @@index([lessonId])
+}
+
+// Forums (§14.2) : discussions par parcours ou générales + réponses.
+model ForumThread {
+  id         String      @id @default(cuid())
+  title      String
+  body       String      @db.Text
+  authorId   String
+  author     User        @relation("ForumThreads", fields: [authorId], references: [id], onDelete: Cascade)
+  parcoursId String? // null = forum général
+  parcours   Parcours?   @relation(fields: [parcoursId], references: [id])
+  pinned     Boolean     @default(false)
+  locked     Boolean     @default(false)
+  deletedAt  DateTime?
+  posts      ForumPost[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  @@index([parcoursId])
+  @@index([createdAt])
+}
+
+model ForumPost {
+  id        String      @id @default(cuid())
+  threadId  String
+  thread    ForumThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User        @relation("ForumPosts", fields: [authorId], references: [id], onDelete: Cascade)
+  body      String      @db.Text
+  deletedAt DateTime?
+  createdAt DateTime    @default(now())
+
+  @@index([threadId])
 }
 
 // Médiathèque centralisée (§17.5) : fichiers téléversés réutilisables.
