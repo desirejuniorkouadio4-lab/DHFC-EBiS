@@ -6,7 +6,7 @@ import { updateUserPrefs } from "@/lib/profile/actions";
 import type { ProfileData } from "@/lib/profile/db";
 import { cn } from "@/lib/utils";
 
-type BoolKey = "showInLeaderboard" | "allowMessages" | "showActivity" | "emailNotif" | "weeklyDigest" | "marketingConsent";
+type BoolKey = "allowMessages" | "emailNotif" | "marketingConsent";
 
 const VISIBILITY = [
   { value: "PUBLIC", label: "Public", desc: "Visible par tous les utilisateurs", icon: Eye },
@@ -58,24 +58,16 @@ export function PrivacySettings({ profile }: { profile: ProfileData }) {
         <h3 className="font-semibold">Interactions</h3>
         <ul className="mt-2 divide-y divide-[var(--border-subtle)]">
           <ToggleRow
-            label="Apparaître dans le classement"
-            desc="Votre nom et votre niveau peuvent figurer au classement de votre cohorte."
-            checked={state.showInLeaderboard}
-            onChange={(v) => setBool("showInLeaderboard", v)}
-          />
-          <ToggleRow
             label="Autoriser les messages privés"
             desc="Les autres membres de vos cohortes peuvent vous écrire."
             checked={state.allowMessages}
             onChange={(v) => setBool("allowMessages", v)}
           />
-          <ToggleRow
-            label="Rendre mon activité visible"
-            desc="Votre progression et votre activité récente sont visibles par vos pairs."
-            checked={state.showActivity}
-            onChange={(v) => setBool("showActivity", v)}
-          />
         </ul>
+        <p className="mt-3 text-xs text-[var(--text-secondary)]">
+          La participation au classement et la visibilité de votre activité auprès de votre cohorte font partie du
+          dispositif de formation et ne sont pas désactivables.
+        </p>
       </div>
 
       {/* Notifications & consentement */}
@@ -87,12 +79,6 @@ export function PrivacySettings({ profile }: { profile: ProfileData }) {
             desc="Rappels d'échéances, corrections, certificats."
             checked={state.emailNotif}
             onChange={(v) => setBool("emailNotif", v)}
-          />
-          <ToggleRow
-            label="Digest hebdomadaire"
-            desc="Un récapitulatif de votre activité chaque semaine."
-            checked={state.weeklyDigest}
-            onChange={(v) => setBool("weeklyDigest", v)}
           />
           <ToggleRow
             label="Communications non essentielles"

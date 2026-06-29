@@ -10,6 +10,7 @@ export type SessionUser = {
   firstName: string;
   lastName: string;
   initials: string;
+  avatarUrl: string | null;
   role: string;
   bivalence: string | null;
   region: string | null;
@@ -81,6 +82,7 @@ export async function getSessionUser(): Promise<SessionUser | null> {
     firstName: u.firstName,
     lastName: u.lastName,
     initials: initials(u.firstName, u.lastName),
+    avatarUrl: u.avatarUrl,
     role: u.role,
     bivalence: u.bivalence,
     region: u.region,

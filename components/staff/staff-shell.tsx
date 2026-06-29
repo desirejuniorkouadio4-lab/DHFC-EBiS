@@ -28,6 +28,7 @@ export function StaffShell({
   role,
   name,
   initials,
+  avatarUrl,
   children,
   impersonating,
   impersonatorName,
@@ -35,6 +36,7 @@ export function StaffShell({
   role: string;
   name: string;
   initials: string;
+  avatarUrl?: string | null;
   children: React.ReactNode;
   impersonating?: boolean;
   impersonatorName?: string;
@@ -132,13 +134,15 @@ export function StaffShell({
                 <LogOut className="h-4 w-4" />
                 <span className="hidden sm:inline">Déconnexion</span>
               </button>
-              <Link
-                href="/profil"
-                aria-label="Mon profil"
-                title={`${name} — Mon profil`}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-green-500 text-sm font-bold text-white transition-transform hover:scale-105"
-              >
-                {initials}
+              <Link href="/profil" aria-label="Mon profil" title={`${name} — Mon profil`} className="shrink-0 transition-transform hover:scale-105">
+                {avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={avatarUrl} alt="" className="h-10 w-10 rounded-full object-cover" />
+                ) : (
+                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-green-500 text-sm font-bold text-white">
+                    {initials}
+                  </span>
+                )}
               </Link>
             </div>
           </div>

@@ -121,12 +121,15 @@ export function AppShell({ user, children }: { user: SessionUser; children: Reac
             </span>
             <NotificationsButton />
             <ThemeToggle />
-            <Link
-              href="/profil"
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-green-500 text-sm font-bold text-white"
-              aria-label="Mon profil"
-            >
-              {user.initials}
+            <Link href="/profil" aria-label="Mon profil" className="shrink-0">
+              {user.avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={user.avatarUrl} alt="" className="h-10 w-10 rounded-full object-cover" />
+              ) : (
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-green-500 text-sm font-bold text-white">
+                  {user.initials}
+                </span>
+              )}
             </Link>
           </div>
         </header>
@@ -206,9 +209,14 @@ function SidebarContent({
           href="/profil"
           className="mt-1 flex items-center gap-3 rounded-xl px-3 py-2.5 transition-colors hover:bg-[var(--bg-secondary)]"
         >
-          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-green-500 text-xs font-bold text-white">
-            {user.initials}
-          </span>
+          {user.avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={user.avatarUrl} alt="" className="h-9 w-9 shrink-0 rounded-full object-cover" />
+          ) : (
+            <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-green-500 text-xs font-bold text-white">
+              {user.initials}
+            </span>
+          )}
           <span className="min-w-0">
             <span className="block truncate text-sm font-semibold">
               {user.firstName} {user.lastName}

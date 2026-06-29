@@ -13,6 +13,7 @@ export type ProfileData = {
   college: string | null;
   phone: string | null;
   bio: string | null;
+  avatarUrl: string | null;
   xp: number;
   level: number;
   streak: number;
@@ -61,6 +62,7 @@ export async function getProfile(userId: string): Promise<ProfileData | null> {
     college: u.college,
     phone: u.phone,
     bio: u.bio,
+    avatarUrl: u.avatarUrl,
     xp: u.xp,
     level: u.level,
     streak: u.streak,

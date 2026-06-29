@@ -13,6 +13,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
       role={user.role}
       name={`${user.firstName} ${user.lastName}`}
       initials={user.initials}
+      avatarUrl={user.avatarUrl}
       impersonating={user.impersonating}
       impersonatorName={user.impersonatorName}
     >

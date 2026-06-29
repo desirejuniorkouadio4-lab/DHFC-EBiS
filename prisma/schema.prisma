@@ -66,6 +66,7 @@ model User {
   // Profil
   phone        String?
   bio          String?          @db.Text
+  avatarUrl    String? // photo de profil (Vercel Blob)
   // Confidentialité / RGPD (§25.3) — contrôle de l'utilisateur sur ses données
   profileVisibility String      @default("COHORT") // PUBLIC | COHORT | PRIVATE
   showInLeaderboard Boolean     @default(true) // apparaître au classement (opt-out)

@@ -7,6 +7,7 @@ import { updateProfile } from "@/lib/profile/actions";
 import { roleLabel } from "@/lib/rbac";
 import { PrivacySettings } from "@/components/profile/privacy-settings";
 import { ChangePassword, DeleteAccount } from "@/components/profile/account-actions";
+import { AvatarUploader } from "@/components/profile/avatar-uploader";
 import { ProgressBar } from "@/components/lms/progress-bar";
 import { formatDate } from "@/lib/utils";
 
@@ -24,6 +25,7 @@ export default async function ProfilPage({ searchParams }: { searchParams: Promi
 
   const initials = `${p.firstName[0] ?? ""}${p.lastName[0] ?? ""}`.toUpperCase();
   const xpPercent = Math.min(100, Math.round((p.xp / Math.max(1, p.level * 300)) * 100));
+  const blobEnabled = !!process.env.BLOB_READ_WRITE_TOKEN;
 
   return (
     <div className="space-y-6">
@@ -31,9 +33,7 @@ export default async function ProfilPage({ searchParams }: { searchParams: Promi
       <section className="relative overflow-hidden rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-6 sm:p-8">
         <div className="pointer-events-none absolute -right-10 -top-10 h-40 w-40 rounded-full bg-orange-500/10 blur-2xl" />
         <div className="relative flex flex-col items-start gap-5 sm:flex-row sm:items-center">
-          <span className="flex h-20 w-20 shrink-0 items-center justify-center rounded-3xl bg-gradient-to-br from-orange-500 to-green-500 font-display text-2xl font-extrabold text-white">
-            {initials}
-          </span>
+          <AvatarUploader avatarUrl={p.avatarUrl} initials={initials} blobEnabled={blobEnabled} />
           <div className="min-w-0 flex-1">
             <h1 className="text-2xl font-bold tracking-tight">
               {p.firstName} {p.lastName}

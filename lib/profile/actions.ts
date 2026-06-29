@@ -30,7 +30,24 @@ export async function updateProfile(formData: FormData): Promise<void> {
   revalidatePath("/profil");
 }
 
-const BOOL_KEYS = ["showInLeaderboard", "allowMessages", "showActivity", "emailNotif", "weeklyDigest", "marketingConsent"] as const;
+// Réglages modifiables par l'utilisateur (classement / activité / digest sont
+// imposés par le dispositif et volontairement absents de cette liste).
+/** Enregistre la photo de profil (fichier déjà téléversé côté client). */
+export async function setAvatar(data: { url: string }): Promise<void> {
+  const user = await requireUser();
+  if (!data?.url || !/^(https?:\/\/|\/uploads\/)/.test(data.url)) return;
+  await prisma.user.update({ where: { id: user.id }, data: { avatarUrl: data.url } });
+  revalidatePath("/profil");
+}
+
+/** Retire la photo de profil. */
+export async function removeAvatar(): Promise<void> {
+  const user = await requireUser();
+  await prisma.user.update({ where: { id: user.id }, data: { avatarUrl: null } });
+  revalidatePath("/profil");
+}
+
+const BOOL_KEYS = ["allowMessages", "emailNotif", "marketingConsent"] as const;
 const VISIBILITY = ["PUBLIC", "COHORT", "PRIVATE"];
 
 /** Met à jour les préférences de confidentialité / notifications (RGPD §25.3). */
