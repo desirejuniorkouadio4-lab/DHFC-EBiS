@@ -12,6 +12,7 @@ import {
   UserPlus,
   PencilRuler,
   Image as ImageIcon,
+  BarChart3,
 } from "lucide-react";
 import { requireRole } from "@/lib/auth-helpers";
 import { getAdminStats } from "@/lib/admin/db";
@@ -55,6 +56,7 @@ export default async function AdminPage() {
         <QuickLink href="/admin/cohortes" icon={GraduationCap} title="Cohortes" desc="Création et affectation des tuteurs." />
         <QuickLink href="/admin/media" icon={ImageIcon} title="Médiathèque" desc="Images et PDF réutilisables." />
         <QuickLink href="/concepteur" icon={PencilRuler} title="Contenus" desc="Parcours, modules, leçons et exercices." />
+        <QuickLink href="/admin/analytics" icon={BarChart3} title="Analytique" desc="Activité, rôles, complétion." />
         <QuickLink href="/admin/parametres" icon={Settings} title="Paramètres" desc="Annonce, maintenance, intégrations." />
       </div>
 
