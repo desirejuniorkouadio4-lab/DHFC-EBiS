@@ -48,7 +48,7 @@ export default async function AdminPage() {
         <Kpi icon={BookOpen} label="Inscriptions" value={s.enrollments} href="/admin/analytics" />
         <Kpi icon={TrendingUp} label="Complétion moy." value={`${s.avgCompletion}%`} tone="orange" href="/admin/analytics" />
         <Kpi icon={ClipboardCheck} label="Devoirs à corriger" value={s.pendingCorrections} tone={s.pendingCorrections ? "amber" : undefined} href="/tuteur/corrections" />
-        <Kpi icon={Layers} label="Parcours publiés" value={s.publishedParcours} hint={`${s.draftParcours} brouillon${s.draftParcours > 1 ? "s" : ""}`} href="/concepteur" />
+        <Kpi icon={Layers} label="Parcours publiés" value={s.publishedParcours} hint={`${s.draftParcours} brouillon${s.draftParcours > 1 ? "s" : ""}`} href="/concepteur?statut=publies" />
         <Kpi icon={GraduationCap} label="Cohortes" value={s.cohorts} href="/admin/cohortes" />
       </div>
 

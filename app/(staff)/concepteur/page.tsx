@@ -11,11 +11,24 @@ const LEVEL_FR: Record<string, string> = {
   AVANCE: "Avancé",
 };
 
-export default async function ConcepteurPage() {
+export default async function ConcepteurPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ statut?: string }>;
+}) {
   await requireRole(["CONCEPTEUR", "ADMIN", "SUPERADMIN"]);
+  const { statut } = await searchParams;
+  const active: "tous" | "publies" | "brouillons" =
+    statut === "publies" || statut === "brouillons" ? statut : "tous";
   const parcours = await listParcoursForConcepteur();
   const published = parcours.filter((p) => p.published).length;
   const drafts = parcours.length - published;
+  const filtered =
+    active === "publies"
+      ? parcours.filter((p) => p.published)
+      : active === "brouillons"
+        ? parcours.filter((p) => !p.published)
+        : parcours;
 
   return (
     <div className="space-y-8">
@@ -48,16 +61,16 @@ export default async function ConcepteurPage() {
         </div>
       </div>
 
-      {/* Indicateurs */}
+      {/* Indicateurs — cliquables = filtres */}
       <div className="grid grid-cols-3 gap-3 sm:max-w-md">
-        <Stat label="Parcours" value={parcours.length} href="#parcours-liste" />
-        <Stat label="Publiés" value={published} tone="green" href="#parcours-liste" />
-        <Stat label="Brouillons" value={drafts} tone="orange" href="#parcours-liste" />
+        <Stat label="Parcours" value={parcours.length} href="?statut=tous#parcours-liste" active={active === "tous"} />
+        <Stat label="Publiés" value={published} tone="green" href="?statut=publies#parcours-liste" active={active === "publies"} />
+        <Stat label="Brouillons" value={drafts} tone="orange" href="?statut=brouillons#parcours-liste" active={active === "brouillons"} />
       </div>
 
       {/* Liste des parcours */}
       {parcours.length === 0 ? (
-        <div className="rounded-3xl border border-dashed border-[var(--border-subtle)] p-12 text-center">
+        <div id="parcours-liste" className="scroll-mt-20 rounded-3xl border border-dashed border-[var(--border-subtle)] p-12 text-center">
           <Layers className="mx-auto h-8 w-8 text-[var(--text-secondary)]" />
           <p className="mt-3 font-semibold">Aucun parcours pour l'instant</p>
           <p className="mt-1 text-sm text-[var(--text-secondary)]">
@@ -71,8 +84,25 @@ export default async function ConcepteurPage() {
           </Link>
         </div>
       ) : (
-        <div id="parcours-liste" className="grid scroll-mt-20 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {parcours.map((p) => (
+        <div id="parcours-liste" className="scroll-mt-20 space-y-4">
+          {active !== "tous" && (
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <span className="text-[var(--text-secondary)]">
+                <strong className="text-[var(--text-primary)]">{filtered.length}</strong> parcours{" "}
+                {active === "publies" ? "publiés" : "brouillons"}
+              </span>
+              <Link href="?statut=tous#parcours-liste" className="font-semibold text-orange-600 hover:underline">
+                Tout afficher
+              </Link>
+            </div>
+          )}
+          {filtered.length === 0 ? (
+            <p className="rounded-2xl border border-dashed border-[var(--border-subtle)] p-8 text-center text-sm text-[var(--text-secondary)]">
+              Aucun parcours {active === "publies" ? "publié" : "brouillon"} pour l'instant.
+            </p>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {filtered.map((p) => (
             <Link
               key={p.id}
               href={`/concepteur/${p.slug}`}
@@ -117,14 +147,28 @@ export default async function ConcepteurPage() {
                 <Pencil className="h-4 w-4" /> Modifier
               </span>
             </Link>
-          ))}
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-function Stat({ label, value, tone, href }: { label: string; value: number; tone?: "green" | "orange"; href?: string }) {
+function Stat({
+  label,
+  value,
+  tone,
+  href,
+  active,
+}: {
+  label: string;
+  value: number;
+  tone?: "green" | "orange";
+  href?: string;
+  active?: boolean;
+}) {
   const color =
     tone === "green" ? "text-green-600" : tone === "orange" ? "text-amber-600" : "text-[var(--text-primary)]";
   const inner = (
@@ -135,7 +179,13 @@ function Stat({ label, value, tone, href }: { label: string; value: number; tone
   );
   if (href) {
     return (
-      <Link href={href} className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4 text-center transition-all hover:-translate-y-0.5 hover:border-orange-300 hover:shadow-md">
+      <Link
+        href={href}
+        aria-current={active ? "true" : undefined}
+        className={`rounded-2xl border bg-[var(--bg-elevated)] p-4 text-center transition-all hover:-translate-y-0.5 hover:shadow-md ${
+          active ? "border-orange-400 ring-1 ring-orange-300" : "border-[var(--border-subtle)] hover:border-orange-300"
+        }`}
+      >
         {inner}
       </Link>
     );
