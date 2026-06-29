@@ -340,13 +340,22 @@ model BankQuestion {
   type        String // ExerciceType
   discipline  String? // filtre par discipline (nom court)
   theme       String? // filtre thématique libre
+  // Catégorisation automatique par leçon (§13.6) : les questions d'un quiz sont
+  // rangées dans la catégorie de leur leçon. La liaison `lessonId` est durable
+  // (les questions survivent à la suppression de la leçon/quiz).
+  category         String? // nom affiché de la catégorie (ex. « Questions par défaut pour la Leçon : X »)
+  lessonId         String? // leçon source (identité de la catégorie), non contraint = pas de cascade
+  sourceExerciceId String? // id de l'exercice du quiz d'origine, pour la synchro (upsert)
   data        Json // objet Exercice complet (ids régénérés à l'import)
   createdById String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  @@unique([lessonId, sourceExerciceId])
   @@index([type])
   @@index([discipline])
+  @@index([lessonId])
+  @@index([category])
   @@index([createdAt])
 }
 

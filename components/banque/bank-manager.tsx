@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Pencil, Trash2, Search, X, Save, Library } from "lucide-react";
+import { Plus, Pencil, Trash2, Search, X, Save, Library, FolderOpen } from "lucide-react";
 import {
   createExercice,
   TYPE_LABEL,
@@ -24,12 +24,15 @@ export function BankManager({ initialItems, blobEnabled }: { initialItems: BankI
   const [items, setItems] = useState(initialItems);
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
   const [draft, setDraft] = useState<Draft | null>(null);
   const [pending, startTransition] = useTransition();
 
+  const categories = [...new Set(items.map((it) => it.category).filter((c): c is string => !!c))].sort();
   const filtered = items.filter(
     (it) =>
       (!typeFilter || it.type === typeFilter) &&
+      (!categoryFilter || it.category === categoryFilter) &&
       (!query.trim() || it.label.toLowerCase().includes(query.trim().toLowerCase()))
   );
 
@@ -72,6 +75,14 @@ export function BankManager({ initialItems, blobEnabled }: { initialItems: BankI
             className={cn(inputClass, "pl-9")}
           />
         </div>
+        <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className={cn(inputClass, "sm:w-64")}>
+          <option value="">Toutes les catégories</option>
+          {categories.map((c) => (
+            <option key={c} value={c}>
+              {c}
+            </option>
+          ))}
+        </select>
         <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className={cn(inputClass, "sm:w-52")}>
           <option value="">Tous les types</option>
           {EXERCICE_TYPES.map((t) => (
@@ -177,9 +188,17 @@ export function BankManager({ initialItems, blobEnabled }: { initialItems: BankI
               </span>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-medium">{it.label}</p>
-                <p className="truncate text-xs text-[var(--text-secondary)]">
-                  {[it.discipline, it.theme].filter(Boolean).join(" · ") || "—"}
-                </p>
+                {it.category ? (
+                  <p className="flex items-center gap-1.5 truncate text-xs text-[var(--text-secondary)]">
+                    <FolderOpen className="h-3 w-3 shrink-0 text-orange-500" />
+                    <span className="truncate">{it.category}</span>
+                    {it.discipline && <span className="shrink-0 opacity-70">· {it.discipline}</span>}
+                  </p>
+                ) : (
+                  <p className="truncate text-xs text-[var(--text-secondary)]">
+                    {[it.discipline, it.theme].filter(Boolean).join(" · ") || "Sans catégorie"}
+                  </p>
+                )}
               </div>
               <button type="button" onClick={() => startEdit(it)} aria-label="Modifier" className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border-subtle)] hover:border-orange-400 hover:text-orange-600">
                 <Pencil className="h-4 w-4" />

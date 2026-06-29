@@ -14,6 +14,8 @@ export type BankItem = {
   type: string;
   discipline: string | null;
   theme: string | null;
+  category: string | null;
+  lessonId: string | null;
   data: Exercice;
   updatedAt: string;
 };
@@ -70,13 +72,16 @@ export async function deleteBankQuestion(id: string): Promise<void> {
 }
 
 /** Recherche dans la banque (appelée depuis le sélecteur d'import du builder). */
-export async function searchBank(filter: { q?: string; type?: string; discipline?: string } = {}): Promise<BankItem[]> {
+export async function searchBank(
+  filter: { q?: string; type?: string; discipline?: string; category?: string } = {}
+): Promise<BankItem[]> {
   await requireRole(CONCEPTEUR_ROLES);
   const q = (filter.q ?? "").trim();
   const rows = await prisma.bankQuestion.findMany({
     where: {
       ...(filter.type ? { type: filter.type } : {}),
       ...(filter.discipline ? { discipline: filter.discipline } : {}),
+      ...(filter.category ? { category: filter.category } : {}),
       ...(q ? { label: { contains: q, mode: "insensitive" as const } } : {}),
     },
     orderBy: { updatedAt: "desc" },
@@ -88,6 +93,8 @@ export async function searchBank(filter: { q?: string; type?: string; discipline
     type: r.type,
     discipline: r.discipline,
     theme: r.theme,
+    category: r.category,
+    lessonId: r.lessonId,
     data: r.data as Exercice,
     updatedAt: r.updatedAt.toISOString(),
   }));

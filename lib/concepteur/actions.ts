@@ -9,6 +9,7 @@ import type { QuizContent } from "@/lib/exercices/types";
 import type { BlocksContent } from "@/lib/blocks/types";
 import { deletePublicFile } from "@/lib/storage/blob";
 import { normalizeCompletion, normalizeAccess, type CompletionRule, type AccessRule } from "@/lib/completion/types";
+import { syncLessonQuizToBank } from "@/lib/banque/sync";
 
 function isStoredUrl(url: string): boolean {
   return /^(https?:\/\/|\/uploads\/)/.test(url);
@@ -343,6 +344,11 @@ export async function updateLesson(
       access: normalizeAccess(data.access) as object,
     },
   });
+  // Rangement automatique des questions du quiz dans la catégorie de la leçon (§13.6).
+  if (data.type === "QUIZ") {
+    await syncLessonQuizToBank(lessonId);
+    revalidatePath("/concepteur/banque");
+  }
   const slug = await parcoursSlugOfLesson(lessonId);
   if (slug) {
     revalidatePath(`/concepteur/${slug}`);

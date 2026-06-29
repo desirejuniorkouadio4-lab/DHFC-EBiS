@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
-import { Search, X, Library, Check, Download } from "lucide-react";
+import { Search, X, Library, Check, Download, FolderOpen } from "lucide-react";
 import {
   cloneExerciceForImport,
   TYPE_LABEL,
@@ -20,6 +20,7 @@ export function BankPicker({ open, onClose, onImport }: { open: boolean; onClose
   const [items, setItems] = useState<BankItem[]>([]);
   const [query, setQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loading, startLoad] = useTransition();
 
@@ -33,6 +34,9 @@ export function BankPicker({ open, onClose, onImport }: { open: boolean; onClose
   }, [open, query, typeFilter]);
 
   if (!open) return null;
+
+  const categories = [...new Set(items.map((it) => it.category).filter((c): c is string => !!c))].sort();
+  const visible = categoryFilter ? items.filter((it) => it.category === categoryFilter) : items;
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -68,7 +72,17 @@ export function BankPicker({ open, onClose, onImport }: { open: boolean; onClose
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--text-secondary)]" />
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Rechercher…" className={cn(inputClass, "pl-9")} />
           </div>
-          <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className={cn(inputClass, "sm:w-48")}>
+          {categories.length > 0 && (
+            <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className={cn(inputClass, "sm:w-52")}>
+              <option value="">Toutes les catégories</option>
+              {categories.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          )}
+          <select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)} className={cn(inputClass, "sm:w-44")}>
             <option value="">Tous les types</option>
             {EXERCICE_TYPES.map((t) => (
               <option key={t} value={t}>
@@ -81,11 +95,11 @@ export function BankPicker({ open, onClose, onImport }: { open: boolean; onClose
         <div className="min-h-32 flex-1 overflow-y-auto p-3">
           {loading ? (
             <p className="py-8 text-center text-sm text-[var(--text-secondary)]">Chargement…</p>
-          ) : items.length === 0 ? (
+          ) : visible.length === 0 ? (
             <p className="py-8 text-center text-sm text-[var(--text-secondary)]">Aucune question dans la banque pour ce filtre.</p>
           ) : (
             <ul className="space-y-1.5">
-              {items.map((it) => {
+              {visible.map((it) => {
                 const checked = selected.has(it.id);
                 return (
                   <li key={it.id}>
@@ -105,8 +119,9 @@ export function BankPicker({ open, onClose, onImport }: { open: boolean; onClose
                       </span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-sm font-medium">{it.label}</span>
-                        <span className="block truncate text-xs text-[var(--text-secondary)]">
-                          {[it.discipline, it.theme].filter(Boolean).join(" · ") || "—"}
+                        <span className="flex items-center gap-1 truncate text-xs text-[var(--text-secondary)]">
+                          {it.category && <FolderOpen className="h-3 w-3 shrink-0 text-orange-500" />}
+                          <span className="truncate">{it.category || [it.discipline, it.theme].filter(Boolean).join(" · ") || "—"}</span>
                         </span>
                       </span>
                     </button>
