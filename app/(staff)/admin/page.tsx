@@ -40,14 +40,14 @@ export default async function AdminPage() {
 
       {/* KPIs */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-        <Kpi icon={Users} label="Utilisateurs" value={s.totalUsers} hint={`${s.activeUsers} actifs`} />
-        <Kpi icon={GraduationCap} label="Apprenants" value={s.learners} />
-        <Kpi icon={Activity} label="Actifs (7 j)" value={s.activeLast7d} tone="green" />
-        <Kpi icon={BookOpen} label="Inscriptions" value={s.enrollments} />
-        <Kpi icon={TrendingUp} label="Complétion moy." value={`${s.avgCompletion}%`} tone="orange" />
-        <Kpi icon={ClipboardCheck} label="Devoirs à corriger" value={s.pendingCorrections} tone={s.pendingCorrections ? "amber" : undefined} />
-        <Kpi icon={Layers} label="Parcours publiés" value={s.publishedParcours} hint={`${s.draftParcours} brouillon${s.draftParcours > 1 ? "s" : ""}`} />
-        <Kpi icon={GraduationCap} label="Cohortes" value={s.cohorts} />
+        <Kpi icon={Users} label="Utilisateurs" value={s.totalUsers} hint={`${s.activeUsers} actifs`} href="/admin/utilisateurs" />
+        <Kpi icon={GraduationCap} label="Apprenants" value={s.learners} href="/admin/utilisateurs?role=APPRENANT" />
+        <Kpi icon={Activity} label="Actifs (7 j)" value={s.activeLast7d} tone="green" href="/admin/analytics" />
+        <Kpi icon={BookOpen} label="Inscriptions" value={s.enrollments} href="/admin/analytics" />
+        <Kpi icon={TrendingUp} label="Complétion moy." value={`${s.avgCompletion}%`} tone="orange" href="/admin/analytics" />
+        <Kpi icon={ClipboardCheck} label="Devoirs à corriger" value={s.pendingCorrections} tone={s.pendingCorrections ? "amber" : undefined} href="/tuteur/corrections" />
+        <Kpi icon={Layers} label="Parcours publiés" value={s.publishedParcours} hint={`${s.draftParcours} brouillon${s.draftParcours > 1 ? "s" : ""}`} href="/concepteur" />
+        <Kpi icon={GraduationCap} label="Cohortes" value={s.cohorts} href="/admin/cohortes" />
       </div>
 
       {/* Accès rapides */}
@@ -114,23 +114,39 @@ function Kpi({
   value,
   hint,
   tone,
+  href,
 }: {
   icon: typeof Users;
   label: string;
   value: number | string;
   hint?: string;
   tone?: "green" | "orange" | "amber";
+  href?: string;
 }) {
   const color =
     tone === "green" ? "text-green-600" : tone === "orange" ? "text-orange-600" : tone === "amber" ? "text-amber-600" : "text-[var(--text-primary)]";
-  return (
-    <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">
-      <Icon className="h-5 w-5 text-[var(--text-secondary)]" />
+  const inner = (
+    <>
+      <div className="flex items-center justify-between">
+        <Icon className="h-5 w-5 text-[var(--text-secondary)]" />
+        {href && <ArrowRight className="h-4 w-4 text-[var(--text-secondary)] opacity-0 transition-opacity group-hover:opacity-100" />}
+      </div>
       <p className={`mt-2 text-2xl font-bold ${color}`}>{value}</p>
       <p className="text-xs text-[var(--text-secondary)]">{label}</p>
       {hint && <p className="mt-0.5 text-xs text-[var(--text-secondary)] opacity-80">{hint}</p>}
-    </div>
+    </>
   );
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className="group rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4 transition-all hover:-translate-y-0.5 hover:border-orange-300 hover:shadow-md"
+      >
+        {inner}
+      </Link>
+    );
+  }
+  return <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4">{inner}</div>;
 }
 
 function QuickLink({ href, icon: Icon, title, desc }: { href: string; icon: typeof Users; title: string; desc: string }) {
