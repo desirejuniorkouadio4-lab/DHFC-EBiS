@@ -80,17 +80,18 @@ export function ContinueCard({ enrollment }: { enrollment: EnrollmentView }) {
  * =========================================================== */
 export function StatsRow({ stats }: { stats: UserStats }) {
   const items = [
-    { label: "Heures de formation", value: stats.hours, suffix: " h", icon: GraduationCap },
-    { label: "Quiz réussis", value: stats.quizPassed, suffix: "", icon: Target },
-    { label: "Jours d'affilée", value: stats.streak, suffix: "", icon: Flame },
-    { label: "Badges obtenus", value: stats.badges, suffix: "", icon: Trophy },
+    { label: "Heures de formation", value: stats.hours, suffix: " h", icon: GraduationCap, href: "/mes-parcours" },
+    { label: "Quiz réussis", value: stats.quizPassed, suffix: "", icon: Target, href: "/classement" },
+    { label: "Jours d'affilée", value: stats.streak, suffix: "", icon: Flame, href: "/classement" },
+    { label: "Badges obtenus", value: stats.badges, suffix: "", icon: Trophy, href: "/profil" },
   ];
   return (
     <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
       {items.map((stat) => (
-        <div
+        <Link
           key={stat.label}
-          className="flex items-center gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4"
+          href={stat.href}
+          className="group flex items-center gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4 transition-all hover:-translate-y-0.5 hover:border-orange-300 hover:shadow-md"
         >
           <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-orange-600 dark:bg-orange-500/10 dark:text-orange-400">
             <stat.icon className="h-5 w-5" />
@@ -101,7 +102,7 @@ export function StatsRow({ stats }: { stats: UserStats }) {
             </div>
             <div className="mt-1 truncate text-xs text-[var(--text-secondary)]">{stat.label}</div>
           </div>
-        </div>
+        </Link>
       ))}
     </div>
   );

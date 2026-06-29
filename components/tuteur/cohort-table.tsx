@@ -26,7 +26,7 @@ const STATUS_META: Record<Status, { label: string; className: string }> = {
   "en-cours": { label: "En cours", className: "bg-[var(--bg-secondary)] text-[var(--text-secondary)]" },
 };
 
-type Filter = "tous" | "inactif" | "en-difficulte" | "termine";
+export type Filter = "tous" | "inactif" | "en-difficulte" | "termine";
 const FILTERS: { key: Filter; label: string }[] = [
   { key: "tous", label: "Tous" },
   { key: "inactif", label: "Inactifs" },
@@ -34,8 +34,8 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: "termine", label: "Terminés" },
 ];
 
-export function CohortTable({ learners }: { learners: LearnerRow[] }) {
-  const [filter, setFilter] = useState<Filter>("tous");
+export function CohortTable({ learners, initialFilter = "tous" }: { learners: LearnerRow[]; initialFilter?: Filter }) {
+  const [filter, setFilter] = useState<Filter>(initialFilter);
   const [query, setQuery] = useState("");
 
   const rows = useMemo(() => {

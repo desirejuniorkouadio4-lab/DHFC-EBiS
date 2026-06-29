@@ -50,9 +50,9 @@ export default async function ConcepteurPage() {
 
       {/* Indicateurs */}
       <div className="grid grid-cols-3 gap-3 sm:max-w-md">
-        <Stat label="Parcours" value={parcours.length} />
-        <Stat label="Publiés" value={published} tone="green" />
-        <Stat label="Brouillons" value={drafts} tone="orange" />
+        <Stat label="Parcours" value={parcours.length} href="#parcours-liste" />
+        <Stat label="Publiés" value={published} tone="green" href="#parcours-liste" />
+        <Stat label="Brouillons" value={drafts} tone="orange" href="#parcours-liste" />
       </div>
 
       {/* Liste des parcours */}
@@ -71,7 +71,7 @@ export default async function ConcepteurPage() {
           </Link>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div id="parcours-liste" className="grid scroll-mt-20 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {parcours.map((p) => (
             <Link
               key={p.id}
@@ -124,13 +124,21 @@ export default async function ConcepteurPage() {
   );
 }
 
-function Stat({ label, value, tone }: { label: string; value: number; tone?: "green" | "orange" }) {
+function Stat({ label, value, tone, href }: { label: string; value: number; tone?: "green" | "orange"; href?: string }) {
   const color =
     tone === "green" ? "text-green-600" : tone === "orange" ? "text-amber-600" : "text-[var(--text-primary)]";
-  return (
-    <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4 text-center">
+  const inner = (
+    <>
       <p className={`text-2xl font-bold ${color}`}>{value}</p>
       <p className="mt-0.5 text-xs text-[var(--text-secondary)]">{label}</p>
-    </div>
+    </>
   );
+  if (href) {
+    return (
+      <Link href={href} className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4 text-center transition-all hover:-translate-y-0.5 hover:border-orange-300 hover:shadow-md">
+        {inner}
+      </Link>
+    );
+  }
+  return <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4 text-center">{inner}</div>;
 }

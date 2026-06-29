@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Download, ShieldCheck, QrCode, Award, Clock } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
 import { ProgressBar } from "@/components/lms/progress-bar";
@@ -107,22 +108,23 @@ export default async function CertificatsPage() {
           <h2 className="mb-5 text-xl font-bold">Certificats à débloquer</h2>
           <div className="space-y-3">
             {inProgress.map((e) => (
-              <div
+              <Link
                 key={e.slug}
-                className="flex flex-col gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-5 sm:flex-row sm:items-center"
+                href={`/apprendre/${e.slug}/${e.resumeLessonId}`}
+                className="group flex flex-col gap-3 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-5 transition-all hover:-translate-y-0.5 hover:border-orange-300 hover:shadow-md sm:flex-row sm:items-center"
               >
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[var(--bg-secondary)] text-neutral-400">
                   <Clock className="h-5 w-5" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="font-semibold">{e.title}</p>
+                  <p className="font-semibold group-hover:text-orange-600">{e.title}</p>
                   <p className="text-xs text-[var(--text-secondary)]">Terminez le parcours pour débloquer votre certificat.</p>
                   <div className="mt-2 max-w-md">
                     <ProgressBar value={e.percent} />
                   </div>
                 </div>
                 <span className="text-sm font-semibold text-orange-600">{e.percent} %</span>
-              </div>
+              </Link>
             ))}
           </div>
         </section>

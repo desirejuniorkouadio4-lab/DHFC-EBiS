@@ -3,9 +3,11 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, Users, TrendingUp, AlertTriangle, MoonStar, CheckCircle2 } from "lucide-react";
 import { requireRole } from "@/lib/auth-helpers";
 import { getCohortForTutor } from "@/lib/tuteur/db";
-import { CohortTable } from "@/components/tuteur/cohort-table";
+import { CohortTable, type Filter } from "@/components/tuteur/cohort-table";
 
 export const dynamic = "force-dynamic";
+
+const VALID_FILTERS: Filter[] = ["tous", "inactif", "en-difficulte", "termine"];
 
 function relativeTime(date: Date | null): string {
   if (!date) return "Jamais";
@@ -20,9 +22,17 @@ function relativeTime(date: Date | null): string {
   return `Il y a ${weeks} sem.`;
 }
 
-export default async function CohortDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function CohortDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ filter?: string }>;
+}) {
   const actor = await requireRole(["TUTEUR", "ENCADREUR", "ADMIN", "SUPERADMIN"]);
   const { id } = await params;
+  const { filter } = await searchParams;
+  const initialFilter: Filter = VALID_FILTERS.includes(filter as Filter) ? (filter as Filter) : "tous";
   const cohort = await getCohortForTutor(id, actor);
   if (!cohort) notFound();
 
@@ -57,18 +67,18 @@ export default async function CohortDetailPage({ params }: { params: Promise<{ i
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard icon={Users} label="Apprenants" value={stats.count} />
-        <StatCard icon={MoonStar} label="Inactifs > 7j" value={stats.inactive} tone={stats.inactive ? "red" : undefined} />
-        <StatCard icon={AlertTriangle} label="En difficulté" value={stats.atRisk} tone={stats.atRisk ? "amber" : undefined} />
-        <StatCard icon={CheckCircle2} label="Terminé" value={stats.finished} tone={stats.finished ? "green" : undefined} />
+        <StatCard icon={Users} label="Apprenants" value={stats.count} href="#suivi" />
+        <StatCard icon={MoonStar} label="Inactifs > 7j" value={stats.inactive} tone={stats.inactive ? "red" : undefined} href="?filter=inactif#suivi" />
+        <StatCard icon={AlertTriangle} label="En difficulté" value={stats.atRisk} tone={stats.atRisk ? "amber" : undefined} href="?filter=en-difficulte#suivi" />
+        <StatCard icon={CheckCircle2} label="Terminé" value={stats.finished} tone={stats.finished ? "green" : undefined} href="?filter=termine#suivi" />
       </div>
 
-      <div className="rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4 sm:p-6">
+      <div id="suivi" className="scroll-mt-20 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-4 sm:p-6">
         <div className="mb-4 flex items-center gap-2">
           <TrendingUp className="h-5 w-5 text-orange-500" />
           <h2 className="font-bold">Suivi des apprenants</h2>
         </div>
-        <CohortTable learners={learners} />
+        <CohortTable learners={learners} initialFilter={initialFilter} />
       </div>
     </div>
   );
@@ -79,19 +89,29 @@ function StatCard({
   label,
   value,
   tone,
+  href,
 }: {
   icon: typeof Users;
   label: string;
   value: number;
   tone?: "red" | "amber" | "green";
+  href?: string;
 }) {
   const color =
     tone === "red" ? "text-red-600" : tone === "amber" ? "text-amber-600" : tone === "green" ? "text-green-600" : "text-[var(--text-primary)]";
-  return (
-    <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-4">
+  const inner = (
+    <>
       <Icon className={`h-5 w-5 ${tone === "red" ? "text-red-500" : tone === "amber" ? "text-amber-500" : tone === "green" ? "text-green-500" : "text-[var(--text-secondary)]"}`} />
       <p className={`mt-2 text-2xl font-bold ${color}`}>{value}</p>
       <p className="text-xs text-[var(--text-secondary)]">{label}</p>
-    </div>
+    </>
   );
+  if (href) {
+    return (
+      <Link href={href} className="block rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-4 transition-all hover:-translate-y-0.5 hover:border-orange-300 hover:shadow-md">
+        {inner}
+      </Link>
+    );
+  }
+  return <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-4">{inner}</div>;
 }
