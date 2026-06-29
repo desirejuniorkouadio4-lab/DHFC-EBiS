@@ -33,6 +33,7 @@ type ParcoursRow = {
   reviewsCount: number;
   enrolledCount: number;
   isNew: boolean;
+  coverUrl: string | null;
   objectives: string[];
   prerequisites: string[];
   tags: string[];
@@ -55,6 +56,7 @@ function toParcours(p: ParcoursRow, lessonsCount: number): Parcours {
     reviews: p.reviewsCount,
     enrolled: p.enrolledCount,
     isNew: p.isNew,
+    coverUrl: p.coverUrl,
     objectives: p.objectives,
     prerequisites: p.prerequisites,
     tags: p.tags,
@@ -72,6 +74,7 @@ const parcoursSelect = {
   reviewsCount: true,
   enrolledCount: true,
   isNew: true,
+  coverUrl: true,
   objectives: true,
   prerequisites: true,
   tags: true,

@@ -26,12 +26,26 @@ export function ParcoursCard({ parcours }: { parcours: Parcours }) {
           background: `linear-gradient(135deg, ${discipline?.color}1a, ${discipline?.color}05)`,
         }}
       >
-        <div className="absolute inset-0 bg-dots opacity-40" />
-        {Icon && (
-          <Icon
-            className="absolute -bottom-4 -right-3 h-32 w-32 opacity-15 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6"
-            style={{ color: discipline?.color }}
-          />
+        {parcours.coverUrl ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={parcours.coverUrl}
+              alt={parcours.title}
+              className="absolute inset-0 h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
+          </>
+        ) : (
+          <>
+            <div className="absolute inset-0 bg-dots opacity-40" />
+            {Icon && (
+              <Icon
+                className="absolute -bottom-4 -right-3 h-32 w-32 opacity-15 transition-transform duration-500 group-hover:scale-110 group-hover:rotate-6"
+                style={{ color: discipline?.color }}
+              />
+            )}
+          </>
         )}
         <div className="absolute left-4 top-4 flex items-center gap-2">
           <span

@@ -24,6 +24,10 @@ const nextConfig: NextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
   },
+  experimental: {
+    // Téléversements (covers, médiathèque, devoirs) via Server Actions.
+    serverActions: { bodySizeLimit: "8mb" },
+  },
   async headers() {
     return [
       {

@@ -175,6 +175,22 @@ export async function listCohortsAdmin(): Promise<AdminCohort[]> {
   }));
 }
 
+export type MediaItem = {
+  id: string;
+  url: string;
+  filename: string;
+  contentType: string;
+  size: number;
+  createdAt: Date;
+};
+
+export async function listMedia(): Promise<MediaItem[]> {
+  return prisma.media.findMany({
+    orderBy: { createdAt: "desc" },
+    select: { id: true, url: true, filename: true, contentType: true, size: true, createdAt: true },
+  });
+}
+
 export type TutorOption = { id: string; name: string };
 
 /** Tuteurs et encadreurs (pour l'affectation aux cohortes). */

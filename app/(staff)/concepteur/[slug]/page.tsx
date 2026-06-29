@@ -18,11 +18,15 @@ import {
   Pencil,
   Layers,
   Users,
+  Image as ImageIcon,
+  Upload,
 } from "lucide-react";
 import { requireRole } from "@/lib/auth-helpers";
 import { getParcoursForEdit, listDisciplines } from "@/lib/concepteur/db";
 import {
   updateParcoursMeta,
+  uploadParcoursCover,
+  removeParcoursCover,
   togglePublish,
   deleteParcours,
   addModule,
@@ -129,7 +133,45 @@ export default async function EditParcoursPage({ params }: { params: Promise<{ s
       {/* Métadonnées */}
       <section className="rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-6">
         <h2 className="font-bold">Informations générales</h2>
-        <form action={updateParcoursMeta.bind(null, parcours.id)} className="mt-5 space-y-5">
+
+        {/* Image de couverture */}
+        <div className="mt-5 space-y-2">
+          <span className={labelClass}>Image de couverture</span>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+            <div className="flex h-28 w-full max-w-xs shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] sm:w-48">
+              {parcours.coverUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={parcours.coverUrl} alt="Couverture" className="h-full w-full object-cover" />
+              ) : (
+                <ImageIcon className="h-8 w-8 text-[var(--text-secondary)]" />
+              )}
+            </div>
+            <div className="space-y-2">
+              <form action={uploadParcoursCover.bind(null, parcours.id)} className="flex flex-wrap items-center gap-2">
+                <input
+                  type="file"
+                  name="cover"
+                  accept="image/png,image/jpeg,image/webp,image/avif"
+                  required
+                  className="max-w-full text-sm text-[var(--text-secondary)] file:mr-3 file:rounded-full file:border-0 file:bg-[var(--bg-secondary)] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-[var(--text-primary)] hover:file:bg-[var(--border-subtle)]"
+                />
+                <SubmitButton variant="ghost" pendingLabel="Envoi…" className="h-10">
+                  <Upload className="h-4 w-4" /> Téléverser
+                </SubmitButton>
+              </form>
+              {parcours.coverUrl && (
+                <form action={removeParcoursCover.bind(null, parcours.id)}>
+                  <SubmitButton variant="subtle" pendingLabel="…" className="h-9 text-xs">
+                    <Trash2 className="h-3.5 w-3.5" /> Retirer l'image
+                  </SubmitButton>
+                </form>
+              )}
+              <p className="text-xs text-[var(--text-secondary)]">JPG, PNG, WebP ou AVIF — 5 Mo max.</p>
+            </div>
+          </div>
+        </div>
+
+        <form action={updateParcoursMeta.bind(null, parcours.id)} className="mt-5 space-y-5 border-t border-[var(--border-subtle)] pt-5">
           <div className="space-y-1.5">
             <label htmlFor="title" className={labelClass}>
               Titre <span className="text-orange-600">*</span>

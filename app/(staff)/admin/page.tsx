@@ -11,6 +11,7 @@ import {
   ArrowRight,
   UserPlus,
   PencilRuler,
+  Image as ImageIcon,
 } from "lucide-react";
 import { requireRole } from "@/lib/auth-helpers";
 import { getAdminStats } from "@/lib/admin/db";
@@ -52,6 +53,7 @@ export default async function AdminPage() {
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <QuickLink href="/admin/utilisateurs" icon={Users} title="Utilisateurs" desc="Rôles, recherche, activation des comptes." />
         <QuickLink href="/admin/cohortes" icon={GraduationCap} title="Cohortes" desc="Création et affectation des tuteurs." />
+        <QuickLink href="/admin/media" icon={ImageIcon} title="Médiathèque" desc="Images et PDF réutilisables." />
         <QuickLink href="/concepteur" icon={PencilRuler} title="Contenus" desc="Parcours, modules, leçons et exercices." />
       </div>
 

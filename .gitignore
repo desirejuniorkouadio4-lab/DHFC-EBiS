@@ -31,3 +31,6 @@ yarn-error.log*
 
 # vercel
 .vercel
+
+# Téléversements locaux (dev) — Blob en prod
+/public/uploads

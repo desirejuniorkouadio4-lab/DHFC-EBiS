@@ -100,6 +100,7 @@ export type Parcours = {
   reviews: number;
   enrolled: number;
   isNew?: boolean;
+  coverUrl?: string | null;
   objectives: string[];
   prerequisites: string[];
   tags: string[];

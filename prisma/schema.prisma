@@ -89,6 +89,7 @@ model Parcours {
   enrolledCount Int          @default(0)
   isNew         Boolean      @default(false)
   published     Boolean      @default(true)
+  coverUrl      String?
   objectives    String[]
   prerequisites String[]
   tags          String[]
@@ -233,6 +234,19 @@ model Submission {
   @@index([status])
   @@index([cohortId])
   @@index([lessonId])
+}
+
+// Médiathèque centralisée (§17.5) : fichiers téléversés réutilisables.
+model Media {
+  id           String   @id @default(cuid())
+  url          String
+  filename     String
+  contentType  String
+  size         Int
+  uploadedById String?
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
 }
 
 model Actualite {

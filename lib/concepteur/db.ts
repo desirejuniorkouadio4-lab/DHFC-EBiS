@@ -77,6 +77,7 @@ export type ParcoursForEdit = {
   level: Level;
   durationHours: number;
   published: boolean;
+  coverUrl: string | null;
   enrolledCount: number;
   objectives: string[];
   prerequisites: string[];
@@ -98,6 +99,7 @@ export async function getParcoursForEdit(slug: string): Promise<ParcoursForEdit 
       level: true,
       durationHours: true,
       published: true,
+      coverUrl: true,
       enrolledCount: true,
       objectives: true,
       prerequisites: true,

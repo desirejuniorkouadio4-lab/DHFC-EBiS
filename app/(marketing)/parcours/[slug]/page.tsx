@@ -194,14 +194,19 @@ export default async function ParcoursDetailPage({
           {/* Carte d'inscription (sticky desktop, en tête sur mobile) */}
           <aside className="order-1 lg:order-2 lg:sticky lg:top-24 lg:self-start">
             <div className="overflow-hidden rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] shadow-lg">
-              <div
-                className="flex aspect-[16/9] items-center justify-center"
-                style={{
-                  background: `linear-gradient(135deg, ${discipline?.color}22, ${discipline?.color}08)`,
-                }}
-              >
-                {Icon && <Icon className="h-16 w-16" style={{ color: discipline?.color }} />}
-              </div>
+              {parcours.coverUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={parcours.coverUrl} alt={parcours.title} className="aspect-[16/9] w-full object-cover" />
+              ) : (
+                <div
+                  className="flex aspect-[16/9] items-center justify-center"
+                  style={{
+                    background: `linear-gradient(135deg, ${discipline?.color}22, ${discipline?.color}08)`,
+                  }}
+                >
+                  {Icon && <Icon className="h-16 w-16" style={{ color: discipline?.color }} />}
+                </div>
+              )}
               <div className="p-6">
                 <dl className="space-y-3 text-sm">
                   <Row icon={Clock} label="Durée estimée" value={`${parcours.durationHours} heures`} />
