@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
 import { ProgressBar } from "@/components/lms/progress-bar";
-import { toggleLessonComplete, markLessonComplete, submitEssays } from "@/lib/lms/actions";
+import { toggleLessonComplete, markLessonComplete, submitEssays, recordQuizResult } from "@/lib/lms/actions";
 import type { Curriculum, Lesson, LessonType } from "@/lib/lms/curriculum";
 import { ExercicePlayer, type SubmissionView } from "@/components/exercices/player";
 import { normalizeQuizContent } from "@/lib/exercices/legacy";
@@ -517,6 +517,11 @@ function QuizView({
     }
     setSubmitted(true);
     const g = gradeQuiz(quiz.exercices, answers);
+    if (hasAuto) {
+      startTransition(() => {
+        void recordQuizResult(g.percent);
+      });
+    }
     if (!hasAuto || g.percent >= quiz.passScore) onPass();
   }
 

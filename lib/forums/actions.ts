@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/auth-helpers";
+import { awardXp, XP } from "@/lib/gamification/xp";
+import { evaluateBadges } from "@/lib/gamification/badges";
 
 /** Le personnel (non-apprenant) peut modérer (épingler, verrouiller, supprimer tout). */
 function isStaff(role: string): boolean {
@@ -45,6 +47,8 @@ export async function createPost(threadId: string, formData: FormData): Promise<
 
   await prisma.forumPost.create({ data: { threadId, authorId: user.id, body: body.slice(0, 5000) } });
   await prisma.forumThread.update({ where: { id: threadId }, data: { updatedAt: new Date() } });
+  await awardXp(user.id, XP.forumPost);
+  await evaluateBadges(user.id);
   revalidatePath(`/forums/${threadId}`);
   revalidatePath("/forums");
 }

@@ -19,6 +19,7 @@ import {
   ChevronRight,
   User,
   LogOut,
+  Trophy,
 } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
@@ -37,6 +38,7 @@ const NAV = [
   { href: "/tableau-de-bord", label: "Tableau de bord", icon: LayoutDashboard },
   { href: "/mes-parcours", label: "Mes parcours", icon: GraduationCap },
   { href: "/certificats", label: "Certificats", icon: Award },
+  { href: "/classement", label: "Classement", icon: Trophy },
   { href: "/forums", label: "Forums", icon: MessagesSquare },
   { href: "/messagerie", label: "Messagerie", icon: Mail },
 ];

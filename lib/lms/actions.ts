@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { issueCertificateIfComplete } from "@/lib/certificates/issue";
+import { awardXp, XP } from "@/lib/gamification/xp";
+import { evaluateBadges } from "@/lib/gamification/badges";
 
 /** Recalcule et enregistre le pourcentage de progression d'une inscription. */
 async function syncEnrollmentProgress(userId: string, slug: string) {
@@ -44,6 +46,10 @@ export async function toggleLessonComplete(slug: string, lessonId: string) {
 
   const percent = await syncEnrollmentProgress(userId, slug);
   if (percent >= 100) await issueCertificateIfComplete(userId, slug);
+  if (nowCompleted) {
+    await awardXp(userId, XP.lesson);
+    await evaluateBadges(userId);
+  }
 
   revalidatePath("/tableau-de-bord");
   revalidatePath("/mes-parcours");
@@ -135,6 +141,11 @@ export async function markLessonComplete(slug: string, lessonId: string) {
   if (!session?.user?.id) return { ok: false };
   const userId = session.user.id;
 
+  const existing = await prisma.lessonProgress.findUnique({
+    where: { userId_lessonId: { userId, lessonId } },
+    select: { completed: true },
+  });
+
   await prisma.lessonProgress.upsert({
     where: { userId_lessonId: { userId, lessonId } },
     update: { completed: true, completedAt: new Date() },
@@ -143,8 +154,20 @@ export async function markLessonComplete(slug: string, lessonId: string) {
 
   const percent = await syncEnrollmentProgress(userId, slug);
   if (percent >= 100) await issueCertificateIfComplete(userId, slug);
+  if (!existing?.completed) {
+    await awardXp(userId, XP.lesson);
+    await evaluateBadges(userId);
+  }
   revalidatePath("/tableau-de-bord");
   revalidatePath("/mes-parcours");
   revalidatePath("/certificats");
   return { ok: true };
+}
+
+/** Vérifie les badges liés au quiz (quiz parfait) à la soumission. */
+export async function recordQuizResult(percent: number): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) return;
+  await evaluateBadges(session.user.id, { quizPerfect: percent >= 100 });
+  revalidatePath("/tableau-de-bord");
 }

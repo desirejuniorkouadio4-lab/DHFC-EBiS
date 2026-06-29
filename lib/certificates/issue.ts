@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/prisma";
+import { awardXp, XP } from "@/lib/gamification/xp";
+import { evaluateBadges } from "@/lib/gamification/badges";
 
 /** Émission des certificats à la complétion d'un parcours (§18.1). */
 
@@ -40,6 +42,8 @@ export async function issueCertificateIfComplete(
     await prisma.certificate.create({
       data: { userId, parcoursId: parcours.id, code, score: Math.round(score) },
     });
+    await awardXp(userId, XP.certificate);
+    await evaluateBadges(userId);
     return code;
   } catch {
     // Course critique : un autre appel a pu créer le certificat entre-temps.
