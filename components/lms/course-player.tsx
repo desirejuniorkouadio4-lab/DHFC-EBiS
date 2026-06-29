@@ -549,6 +549,8 @@ function QuizView({
                   submitted={submitted}
                   result={res}
                   submission={submissions[ex.id]}
+                  slug={slug}
+                  lessonId={lessonId}
                 />
               </div>
               {submitted && res && ex.feedback && (

@@ -1,8 +1,10 @@
 "use client";
 
-import { CheckCircle2, XCircle, ArrowUp, ArrowDown, Clock, Award } from "lucide-react";
+import { CheckCircle2, XCircle, ArrowUp, ArrowDown, Clock, Award, Paperclip, Download, Upload } from "lucide-react";
 import type { Exercice } from "@/lib/exercices/types";
 import type { GradeResult } from "@/lib/exercices/grade";
+import { submitAssignmentFile } from "@/lib/lms/actions";
+import { SubmitButton } from "@/components/concepteur/submit-button";
 import { cn } from "@/lib/utils";
 
 export type SubmissionView = {
@@ -20,6 +22,8 @@ type PlayerProps<T extends Exercice = Exercice> = {
   submitted: boolean;
   result?: GradeResult;
   submission?: SubmissionView;
+  slug?: string;
+  lessonId?: string;
 };
 
 /** Player d'exercice (apprenant) — dispatcher par type, feedback instantané. */
@@ -44,7 +48,82 @@ export function ExercicePlayer(props: PlayerProps) {
       return <CalculPlayer {...props} exercice={exercice} />;
     case "REPONSE_LONGUE":
       return <ReponseLonguePlayer {...props} exercice={exercice} />;
+    case "DEPOT_FICHIER":
+      return <DepotFichierPlayer {...props} exercice={exercice} />;
   }
+}
+
+function fileLabel(url: string): string {
+  const last = url.split("/").pop() ?? "fichier";
+  return last.replace(/^[a-z0-9]+-[a-z0-9]+-/, "");
+}
+
+function DepotFichierPlayer({ exercice, submission, slug, lessonId }: PlayerProps<Extract<Exercice, { type: "DEPOT_FICHIER" }>>) {
+  // Déjà corrigé.
+  if (submission?.status === "GRADED") {
+    return (
+      <div className="space-y-3">
+        <FileLink url={submission.answer} />
+        <div className="rounded-xl border border-green-400 bg-green-50 p-4 dark:bg-green-500/10">
+          <p className="flex items-center gap-2 font-bold text-green-700 dark:text-green-300">
+            <Award className="h-4 w-4" /> Corrigé : {submission.score}/{submission.maxScore}
+          </p>
+          {submission.feedback && (
+            <p className="mt-2 whitespace-pre-wrap text-sm text-[var(--text-secondary)]">{submission.feedback}</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Déposé, en attente de correction.
+  if (submission?.status === "PENDING") {
+    return (
+      <div className="space-y-2">
+        <FileLink url={submission.answer} />
+        <p className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
+          <Clock className="h-3.5 w-3.5" /> Déposé — en attente de correction
+        </p>
+      </div>
+    );
+  }
+
+  // Dépôt.
+  if (!slug || !lessonId) return null;
+  return (
+    <form
+      action={submitAssignmentFile.bind(null, slug, lessonId, exercice.id, exercice.prompt)}
+      className="flex flex-col gap-3 rounded-xl border border-dashed border-[var(--border-subtle)] p-4 sm:flex-row sm:items-center"
+    >
+      <input
+        type="file"
+        name="file"
+        required
+        className="min-w-0 flex-1 text-sm text-[var(--text-secondary)] file:mr-3 file:rounded-full file:border-0 file:bg-[var(--bg-secondary)] file:px-4 file:py-2 file:text-sm file:font-semibold file:text-[var(--text-primary)] hover:file:bg-[var(--border-subtle)]"
+      />
+      <SubmitButton pendingLabel="Dépôt…" className="shrink-0">
+        <Upload className="h-4 w-4" /> Déposer
+      </SubmitButton>
+      <p className="text-xs text-[var(--text-secondary)] sm:hidden">
+        {exercice.data.acceptHint} · {exercice.data.maxMb} Mo max
+      </p>
+    </form>
+  );
+}
+
+function FileLink({ url }: { url: string }) {
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      className="inline-flex items-center gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-secondary)] px-4 py-3 text-sm font-medium transition-colors hover:border-orange-400"
+    >
+      <Paperclip className="h-4 w-4 text-orange-500" />
+      <span className="truncate">{fileLabel(url)}</span>
+      <Download className="ml-auto h-4 w-4 text-[var(--text-secondary)]" />
+    </a>
+  );
 }
 
 /* --------- options (QCU/QCM) --------- */

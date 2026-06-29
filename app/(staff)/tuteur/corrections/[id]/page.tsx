@@ -1,12 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, BookOpen, ClipboardCheck, FileText, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, BookOpen, ClipboardCheck, FileText, CheckCircle2, Paperclip, Download } from "lucide-react";
 import { requireRole } from "@/lib/auth-helpers";
 import { getSubmissionForTutor } from "@/lib/tuteur/corrections";
 import { gradeSubmission } from "@/lib/tuteur/actions";
 import { SubmitButton } from "@/components/concepteur/submit-button";
 
 export const dynamic = "force-dynamic";
+
+/** Une réponse « fichier » est une URL (devoir déposé) plutôt qu'un texte. */
+function isFileAnswer(answer: string): boolean {
+  return /^(https?:\/\/|\/uploads\/)/.test(answer.trim());
+}
 
 export default async function CorrectionPage({ params }: { params: Promise<{ id: string }> }) {
   const actor = await requireRole(["TUTEUR", "ENCADREUR", "ADMIN", "SUPERADMIN"]);
@@ -62,9 +67,22 @@ export default async function CorrectionPage({ params }: { params: Promise<{ id:
       {/* Réponse de l'apprenant */}
       <section className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-5">
         <h2 className="text-sm font-bold">Réponse de l'apprenant</h2>
-        <div className="mt-2 whitespace-pre-wrap rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-4 text-sm leading-relaxed">
-          {sub.answer}
-        </div>
+        {isFileAnswer(sub.answer) ? (
+          <a
+            href={sub.answer}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-2 inline-flex w-full items-center gap-2 rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-4 py-3 text-sm font-medium transition-colors hover:border-orange-400"
+          >
+            <Paperclip className="h-4 w-4 text-orange-500" />
+            <span className="truncate">Fichier déposé par l'apprenant</span>
+            <Download className="ml-auto h-4 w-4 text-[var(--text-secondary)]" />
+          </a>
+        ) : (
+          <div className="mt-2 whitespace-pre-wrap rounded-xl border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-4 text-sm leading-relaxed">
+            {sub.answer}
+          </div>
+        )}
       </section>
 
       {/* Correction */}

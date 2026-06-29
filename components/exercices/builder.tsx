@@ -182,6 +182,8 @@ function ExerciceConfig({ ex, onUpdate }: { ex: Exercice; onUpdate: (e: Exercice
       return <CalculConfig ex={ex} onUpdate={onUpdate} />;
     case "REPONSE_LONGUE":
       return <ReponseLongueConfig ex={ex} onUpdate={onUpdate} />;
+    case "DEPOT_FICHIER":
+      return <DepotFichierConfig ex={ex} onUpdate={onUpdate} />;
   }
 }
 
@@ -501,6 +503,48 @@ function ReponseLongueConfig({ ex, onUpdate }: Cfg<Extract<Exercice, { type: "RE
           onChange={(e) => onUpdate({ ...ex, data: { ...ex.data, rubric: e.target.value } })}
           rows={3}
           placeholder="Critères attendus : exactitude scientifique, clarté, exemples de classe…"
+          className="w-full resize-y rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-3 text-sm outline-none focus:border-orange-500"
+        />
+      </div>
+    </div>
+  );
+}
+
+function DepotFichierConfig({ ex, onUpdate }: Cfg<Extract<Exercice, { type: "DEPOT_FICHIER" }>>) {
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
+        Correction manuelle : le fichier déposé sera envoyé au tuteur pour notation.
+      </div>
+      <div className="flex flex-wrap items-end gap-4">
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-[var(--text-secondary)]">Formats attendus</label>
+          <input
+            value={ex.data.acceptHint}
+            onChange={(e) => onUpdate({ ...ex, data: { ...ex.data, acceptHint: e.target.value } })}
+            placeholder="PDF, image…"
+            className={cn(inputClass, "w-44")}
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs font-medium text-[var(--text-secondary)]">Taille max (Mo)</label>
+          <input
+            type="number"
+            min={1}
+            max={8}
+            value={ex.data.maxMb}
+            onChange={(e) => onUpdate({ ...ex, data: { ...ex.data, maxMb: Math.min(8, Math.max(1, Number(e.target.value) || 1)) } })}
+            className={cn(inputClass, "w-24")}
+          />
+        </div>
+      </div>
+      <div className="space-y-1.5">
+        <label className="text-xs font-medium text-[var(--text-secondary)]">Grille de notation (visible par le tuteur)</label>
+        <textarea
+          value={ex.data.rubric}
+          onChange={(e) => onUpdate({ ...ex, data: { ...ex.data, rubric: e.target.value } })}
+          rows={2}
+          placeholder="Critères de correction du devoir…"
           className="w-full resize-y rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-3 text-sm outline-none focus:border-orange-500"
         />
       </div>

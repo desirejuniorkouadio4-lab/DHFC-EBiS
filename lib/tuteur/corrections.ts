@@ -120,7 +120,7 @@ export async function getSubmissionForTutor(id: string, actor: SessionUser): Pro
   let rubric = "";
   const quiz = normalizeQuizContent(s.lesson.content);
   const ex = quiz.exercices.find((e) => e.id === s.exerciceId);
-  if (ex && ex.type === "REPONSE_LONGUE") rubric = ex.data.rubric;
+  if (ex && (ex.type === "REPONSE_LONGUE" || ex.type === "DEPOT_FICHIER")) rubric = ex.data.rubric;
 
   const name = `${s.user.firstName} ${s.user.lastName}`;
   return {

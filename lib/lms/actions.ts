@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { issueCertificateIfComplete } from "@/lib/certificates/issue";
+import { uploadPublicFile, fileToBuffer } from "@/lib/storage/blob";
 
 /** Recalcule et enregistre le pourcentage de progression d'une inscription. */
 async function syncEnrollmentProgress(userId: string, slug: string) {
@@ -90,6 +91,48 @@ export async function submitEssays(
   }
   revalidatePath(`/apprendre/${slug}`, "layout");
   return { ok: true };
+}
+
+/**
+ * Dépose le fichier d'un exercice « dépôt de devoir » (file de correction tuteur).
+ * N'écrase pas un dépôt existant.
+ */
+export async function submitAssignmentFile(
+  slug: string,
+  lessonId: string,
+  exerciceId: string,
+  prompt: string,
+  formData: FormData
+): Promise<void> {
+  const session = await auth();
+  if (!session?.user?.id) return;
+  const userId = session.user.id;
+
+  const file = formData.get("file");
+  if (!(file instanceof File) || file.size === 0) return;
+
+  const { buffer, contentType, name } = await fileToBuffer(file, { maxBytes: 8 * 1024 * 1024 });
+  const { url } = await uploadPublicFile("devoirs", name, buffer, contentType);
+
+  const enrollment = await prisma.enrollment.findFirst({
+    where: { userId, parcours: { slug } },
+    select: { cohortId: true },
+  });
+
+  await prisma.submission.upsert({
+    where: { userId_lessonId_exerciceId: { userId, lessonId, exerciceId } },
+    update: {},
+    create: {
+      userId,
+      lessonId,
+      exerciceId,
+      prompt: prompt.slice(0, 1000),
+      answer: url,
+      cohortId: enrollment?.cohortId ?? null,
+      status: "PENDING",
+    },
+  });
+  revalidatePath(`/apprendre/${slug}`, "layout");
 }
 
 /** Marque une leçon comme terminée (idempotent) — utilisé sur « Suivant ». */

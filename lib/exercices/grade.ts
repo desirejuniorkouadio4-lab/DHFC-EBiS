@@ -97,6 +97,7 @@ export function gradeExercice(ex: Exercice, answer: unknown): GradeResult {
     }
 
     case "REPONSE_LONGUE":
+    case "DEPOT_FICHIER":
       // Correction manuelle par le tuteur : non auto-corrigé.
       return { score: 0, correct: false };
   }

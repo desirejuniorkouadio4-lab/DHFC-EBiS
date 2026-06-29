@@ -14,12 +14,13 @@ export const EXERCICE_TYPES = [
   "APPARIEMENT",
   "CALCUL",
   "REPONSE_LONGUE",
+  "DEPOT_FICHIER",
 ] as const;
 
 export type ExerciceType = (typeof EXERCICE_TYPES)[number];
 
 /** Types corrigés manuellement par le tuteur (pas d'auto-correction). */
-export const MANUAL_TYPES: ExerciceType[] = ["REPONSE_LONGUE"];
+export const MANUAL_TYPES: ExerciceType[] = ["REPONSE_LONGUE", "DEPOT_FICHIER"];
 export function isManualType(type: ExerciceType): boolean {
   return MANUAL_TYPES.includes(type);
 }
@@ -43,7 +44,8 @@ export type Exercice =
   | (Base & { type: "ORDONNANCEMENT"; data: { items: OrderItem[] }; correctAnswer: string[] })
   | (Base & { type: "APPARIEMENT"; data: { leftItems: Option[]; rightItems: Option[] }; correctAnswer: Record<string, string> })
   | (Base & { type: "CALCUL"; data: { tolerance: number; unit: string | null }; correctAnswer: number })
-  | (Base & { type: "REPONSE_LONGUE"; data: { minWords: number; maxWords: number; rubric: string } });
+  | (Base & { type: "REPONSE_LONGUE"; data: { minWords: number; maxWords: number; rubric: string } })
+  | (Base & { type: "DEPOT_FICHIER"; data: { acceptHint: string; maxMb: number; rubric: string } });
 
 export type QuizContent = {
   kind: "quiz";
@@ -63,6 +65,7 @@ export type AnswerByType = {
   APPARIEMENT: Record<string, string>;
   CALCUL: string;
   REPONSE_LONGUE: string;
+  DEPOT_FICHIER: string;
 };
 
 export const TYPE_LABEL: Record<ExerciceType, string> = {
@@ -75,6 +78,7 @@ export const TYPE_LABEL: Record<ExerciceType, string> = {
   APPARIEMENT: "Appariement",
   CALCUL: "Calcul",
   REPONSE_LONGUE: "Réponse longue",
+  DEPOT_FICHIER: "Dépôt de fichier",
 };
 
 export const TYPE_HINT: Record<ExerciceType, string> = {
@@ -87,6 +91,7 @@ export const TYPE_HINT: Record<ExerciceType, string> = {
   APPARIEMENT: "Relier chaque élément de gauche au bon élément de droite.",
   CALCUL: "Résultat numérique avec tolérance.",
   REPONSE_LONGUE: "Texte développé, corrigé manuellement par le tuteur.",
+  DEPOT_FICHIER: "Devoir à déposer (PDF, image…), corrigé par le tuteur.",
 };
 
 let counter = 0;
@@ -154,6 +159,8 @@ export function createExercice(type: ExerciceType): Exercice {
       return { ...base, type, data: { tolerance: 0, unit: null }, correctAnswer: 0 };
     case "REPONSE_LONGUE":
       return { ...base, type, data: { minWords: 0, maxWords: 0, rubric: "" } };
+    case "DEPOT_FICHIER":
+      return { ...base, type, data: { acceptHint: "PDF, image", maxMb: 8, rubric: "" } };
   }
 }
 
@@ -169,6 +176,7 @@ export function emptyAnswer(ex: Exercice): unknown {
     case "REPONSE_COURTE":
     case "CALCUL":
     case "REPONSE_LONGUE":
+    case "DEPOT_FICHIER":
       return "";
     case "TEXTE_A_TROUS":
       return {};
