@@ -101,14 +101,20 @@ export default async function EditParcoursPage({ params }: { params: Promise<{ s
             </h1>
           </div>
 
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            <Link
+              href={`/apercu/${parcours.slug}`}
+              className="inline-flex h-10 items-center gap-2 rounded-full border border-[var(--border-subtle)] px-4 text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:border-orange-400 hover:text-orange-600"
+            >
+              <PlayCircle className="h-4 w-4" /> Tester en tant qu'apprenant
+            </Link>
             <a
               href={`/parcours/${parcours.slug}`}
               target="_blank"
               rel="noreferrer"
               className="inline-flex h-10 items-center gap-2 rounded-full border border-[var(--border-subtle)] px-4 text-sm font-semibold text-[var(--text-secondary)] transition-colors hover:border-orange-400 hover:text-orange-600"
             >
-              <Eye className="h-4 w-4" /> Aperçu
+              <Eye className="h-4 w-4" /> Aperçu public
             </a>
             <form action={togglePublish.bind(null, parcours.id)}>
               <SubmitButton

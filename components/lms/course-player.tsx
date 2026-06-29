@@ -53,6 +53,8 @@ export function CoursePlayer({
   initialCompleted,
   submissions = {},
   blobEnabled = false,
+  preview = false,
+  exitHref = "/mes-parcours",
 }: {
   slug: string;
   lessonId: string;
@@ -60,6 +62,10 @@ export function CoursePlayer({
   initialCompleted: string[];
   submissions?: Record<string, SubmissionView>;
   blobEnabled?: boolean;
+  /** Mode aperçu concepteur : aucune écriture de progression, verrous bypassés. */
+  preview?: boolean;
+  /** Cible du bouton « Quitter » (par défaut /mes-parcours). */
+  exitHref?: string;
 }) {
   const [completed, setCompleted] = useState<Set<string>>(() => new Set(initialCompleted));
   const [, startTransition] = useTransition();
@@ -90,11 +96,14 @@ export function CoursePlayer({
     return map;
   }, [curriculum, completed]);
   const titleById = useMemo(() => new Map(curriculum.flat.map((l) => [l.id, l.title])), [curriculum]);
-  const lockOf = (id: string): AccessState => lockMap.get(id) ?? { locked: false, missing: [] };
+  const lockOf = (id: string): AccessState =>
+    preview ? { locked: false, missing: [] } : lockMap.get(id) ?? { locked: false, missing: [] };
   const modeOf = (l: Lesson): CompletionRule["mode"] => l.completion?.mode ?? "manual";
+  const linkBase = preview ? `/apercu/${slug}` : `/apprendre/${slug}`;
 
   // Condition d'achèvement « vue » : signale l'ouverture (si déverrouillée).
   useEffect(() => {
+    if (preview) return;
     const l = curriculum.flat.find((x) => x.id === lessonId);
     if (!l || lockOf(l.id).locked) return;
     void recordLessonView(slug, l.id);
@@ -109,6 +118,7 @@ export function CoursePlayer({
       else n.add(id);
       return n;
     });
+    if (preview) return; // aperçu : aucune écriture
     startTransition(() => {
       void toggleLessonComplete(slug, id);
     });
@@ -120,6 +130,7 @@ export function CoursePlayer({
     if (l && modeOf(l) !== "manual") return;
     if (lockOf(id).locked) return;
     setCompleted((prev) => new Set(prev).add(id));
+    if (preview) return; // aperçu : aucune écriture
     startTransition(() => {
       void markLessonComplete(slug, id);
     });
@@ -130,7 +141,7 @@ export function CoursePlayer({
       <div className="flex min-h-screen items-center justify-center p-8 text-center">
         <div>
           <p className="text-lg font-semibold">Leçon introuvable</p>
-          <Link href="/mes-parcours" className="mt-3 inline-block text-sm font-semibold text-orange-600">
+          <Link href={exitHref} className="mt-3 inline-block text-sm font-semibold text-orange-600">
             Retour à mes parcours
           </Link>
         </div>
@@ -158,7 +169,7 @@ export function CoursePlayer({
       {/* Top bar */}
       <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b border-[var(--border-subtle)] bg-[var(--bg-primary)] px-4">
         <div className="flex min-w-0 items-center gap-3">
-          <Link href="/mes-parcours" aria-label="Quitter le cours" className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-subtle)] hover:border-orange-400">
+          <Link href={exitHref} aria-label="Quitter le cours" className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-subtle)] hover:border-orange-400">
             <X className="h-4 w-4" />
           </Link>
           <LogoMark className="hidden h-8 w-auto sm:block" />
@@ -185,7 +196,7 @@ export function CoursePlayer({
       <div className="mx-auto flex max-w-[1400px]">
         {/* Sidebar desktop */}
         <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] w-80 shrink-0 overflow-y-auto border-r border-[var(--border-subtle)] bg-[var(--bg-primary)] lg:block">
-          <CourseSidebar slug={slug} curriculum={curriculum} currentId={lesson.id} isCompleted={isCompleted} lockOf={lockOf} />
+          <CourseSidebar linkBase={linkBase} curriculum={curriculum} currentId={lesson.id} isCompleted={isCompleted} lockOf={lockOf} />
         </aside>
 
         {/* Sommaire mobile (bottom sheet) */}
@@ -215,7 +226,7 @@ export function CoursePlayer({
                   </button>
                 </div>
                 <div className="min-h-0 flex-1 overflow-y-auto">
-                  <CourseSidebar slug={slug} curriculum={curriculum} currentId={lesson.id} isCompleted={isCompleted} lockOf={lockOf} />
+                  <CourseSidebar linkBase={linkBase} curriculum={curriculum} currentId={lesson.id} isCompleted={isCompleted} lockOf={lockOf} />
                 </div>
               </motion.aside>
             </motion.div>
@@ -226,10 +237,10 @@ export function CoursePlayer({
         <main className="min-w-0 flex-1 px-4 py-6 pb-28 sm:px-8 sm:py-8 lg:pb-8">
           <div className="mx-auto max-w-3xl">
             {currentLock.locked ? (
-              <LockedPanel missing={currentLock.missing} titleById={titleById} slug={slug} />
+              <LockedPanel missing={currentLock.missing} titleById={titleById} linkBase={linkBase} />
             ) : (
               <>
-                <LessonContent lesson={lesson} onPassQuiz={() => markDone(lesson.id)} slug={slug} submissions={submissions} blobEnabled={blobEnabled} />
+                <LessonContent lesson={lesson} onPassQuiz={() => markDone(lesson.id)} slug={slug} submissions={submissions} blobEnabled={blobEnabled} preview={preview} />
 
                 {/* Onglets */}
                 <div className="mt-8">
@@ -260,7 +271,7 @@ export function CoursePlayer({
             <div className="mt-6 hidden flex-col items-stretch gap-3 border-t border-[var(--border-subtle)] pt-6 sm:flex-row sm:items-center sm:justify-between lg:flex">
               {prev ? (
                 <Link
-                  href={`/apprendre/${slug}/${prev.id}`}
+                  href={`${linkBase}/${prev.id}`}
                   className="inline-flex h-11 items-center justify-center gap-2 rounded-full border border-[var(--border-subtle)] px-5 text-sm font-semibold transition-colors hover:border-orange-400"
                 >
                   <ChevronLeft className="h-4 w-4" /> Précédent
@@ -273,7 +284,7 @@ export function CoursePlayer({
 
               {next ? (
                 <Link
-                  href={`/apprendre/${slug}/${next.id}`}
+                  href={`${linkBase}/${next.id}`}
                   onClick={() => markDone(lesson.id)}
                   className="group inline-flex h-11 items-center justify-center gap-2 rounded-full bg-orange-500 px-5 text-sm font-semibold text-white transition-colors hover:bg-orange-600"
                 >
@@ -281,7 +292,7 @@ export function CoursePlayer({
                 </Link>
               ) : (
                 <Link
-                  href="/mes-parcours"
+                  href={exitHref}
                   onClick={() => markDone(lesson.id)}
                   className="inline-flex h-11 items-center justify-center gap-2 rounded-full bg-green-500 px-5 text-sm font-semibold text-white hover:bg-green-600"
                 >
@@ -297,7 +308,7 @@ export function CoursePlayer({
       <div className="fixed inset-x-0 bottom-0 z-40 flex items-center gap-2 border-t border-[var(--border-subtle)] bg-[var(--bg-primary)]/90 px-4 py-3 pb-safe backdrop-blur lg:hidden">
         {prev ? (
           <Link
-            href={`/apprendre/${slug}/${prev.id}`}
+            href={`${linkBase}/${prev.id}`}
             aria-label="Leçon précédente"
             className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[var(--border-subtle)]"
           >
@@ -339,7 +350,7 @@ export function CoursePlayer({
 
         {next ? (
           <Link
-            href={`/apprendre/${slug}/${next.id}`}
+            href={`${linkBase}/${next.id}`}
             onClick={() => markDone(lesson.id)}
             aria-label="Leçon suivante"
             className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-orange-500 text-white"
@@ -348,7 +359,7 @@ export function CoursePlayer({
           </Link>
         ) : (
           <Link
-            href="/mes-parcours"
+            href={exitHref}
             onClick={() => markDone(lesson.id)}
             aria-label="Terminer le parcours"
             className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-green-500 text-white"
@@ -365,13 +376,13 @@ export function CoursePlayer({
  *  Sidebar du cours
  * =========================================================== */
 function CourseSidebar({
-  slug,
+  linkBase,
   curriculum,
   currentId,
   isCompleted,
   lockOf,
 }: {
-  slug: string;
+  linkBase: string;
   curriculum: Curriculum;
   currentId: string;
   isCompleted: (id: string) => boolean;
@@ -428,7 +439,7 @@ function CourseSidebar({
               return (
                 <li key={l.id}>
                   <Link
-                    href={`/apprendre/${slug}/${l.id}`}
+                    href={`${linkBase}/${l.id}`}
                     className={cn(
                       "flex items-start gap-2.5 rounded-xl px-3 py-2.5 text-sm transition-colors",
                       current
@@ -452,11 +463,11 @@ function CourseSidebar({
 function LockedPanel({
   missing,
   titleById,
-  slug,
+  linkBase,
 }: {
   missing: string[];
   titleById: Map<string, string>;
-  slug: string;
+  linkBase: string;
 }) {
   return (
     <div className="rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-8 text-center">
@@ -472,7 +483,7 @@ function LockedPanel({
         {missing.map((id) => (
           <li key={id}>
             <Link
-              href={`/apprendre/${slug}/${id}`}
+              href={`${linkBase}/${id}`}
               className="flex items-center gap-2.5 rounded-xl border border-[var(--border-subtle)] px-4 py-3 text-sm font-medium transition-colors hover:border-orange-400"
             >
               <Circle className="h-4 w-4 shrink-0 text-orange-500" />
@@ -543,12 +554,14 @@ function LessonContent({
   slug,
   submissions,
   blobEnabled,
+  preview,
 }: {
   lesson: Lesson;
   onPassQuiz: () => void;
   slug: string;
   submissions: Record<string, SubmissionView>;
   blobEnabled: boolean;
+  preview: boolean;
 }) {
   return (
     <div>
@@ -560,7 +573,7 @@ function LessonContent({
       <div className="mt-6">
         {lesson.content.kind === "video" && <VideoView lesson={lesson} />}
         {lesson.content.kind === "quiz" ? (
-          <QuizView lesson={lesson} onPass={onPassQuiz} slug={slug} lessonId={lesson.id} submissions={submissions} blobEnabled={blobEnabled} />
+          <QuizView lesson={lesson} onPass={onPassQuiz} slug={slug} lessonId={lesson.id} submissions={submissions} blobEnabled={blobEnabled} preview={preview} />
         ) : lesson.content.kind !== "video" ? (
           <TexteView lesson={lesson} />
         ) : null}
@@ -629,6 +642,7 @@ function QuizView({
   lessonId,
   submissions,
   blobEnabled,
+  preview,
 }: {
   lesson: Lesson;
   onPass: () => void;
@@ -636,6 +650,7 @@ function QuizView({
   lessonId: string;
   submissions: Record<string, SubmissionView>;
   blobEnabled: boolean;
+  preview: boolean;
 }) {
   const [quiz] = useState(() => normalizeQuizContent(lesson.content));
   const initAnswers = () => {
@@ -751,6 +766,13 @@ function QuizView({
     if (isExam && typeof document !== "undefined" && document.fullscreenElement) {
       void document.exitFullscreen?.().catch(() => {});
     }
+    setSubmitted(true);
+    const g = gradeQuiz(quiz.exercices, answers);
+    if (preview) {
+      // Aperçu concepteur : correction locale, aucune écriture en base.
+      if (!hasAuto || g.percent >= quiz.passScore) onPass();
+      return;
+    }
     // Persiste les réponses longues non encore soumises.
     const essays = quiz.exercices
       .filter((ex) => isManualType(ex.type) && !submissions[ex.id])
@@ -761,8 +783,6 @@ function QuizView({
         void submitEssays(slug, lessonId, essays);
       });
     }
-    setSubmitted(true);
-    const g = gradeQuiz(quiz.exercices, answers);
     if (hasAuto) {
       startTransition(() => {
         void recordQuizResult(slug, lessonId, g.percent);
