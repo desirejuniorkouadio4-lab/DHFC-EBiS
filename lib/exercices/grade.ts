@@ -96,6 +96,29 @@ export function gradeExercice(ex: Exercice, answer: unknown): GradeResult {
       return { score: ok ? 1 : 0, correct: ok };
     }
 
+    case "HOTSPOT": {
+      const sel = new Set(Array.isArray(answer) ? (answer as string[]) : []);
+      const right = new Set(ex.correctAnswer);
+      if (right.size === 0) return { score: 0, correct: false };
+      // Crédit partiel : +1/N par bonne zone, -1/N par zone erronée.
+      const n = right.size;
+      let raw = 0;
+      for (const id of sel) raw += right.has(id) ? 1 / n : -1 / n;
+      const score = clamp01(raw);
+      const exact = sel.size === right.size && [...sel].every((id) => right.has(id));
+      return { score, correct: exact };
+    }
+
+    case "GLISSER_DEPOSER_IMAGE": {
+      const ans = (answer ?? {}) as Record<string, string>;
+      const targets = ex.data.targets;
+      if (targets.length === 0) return { score: 0, correct: false };
+      let good = 0;
+      for (const t of targets) if (t.label !== "" && (ans[t.id] ?? "") === t.label) good += 1;
+      const score = good / targets.length;
+      return { score, correct: score >= 1 };
+    }
+
     case "REPONSE_LONGUE":
     case "DEPOT_FICHIER":
       // Correction manuelle par le tuteur : non auto-corrigé.

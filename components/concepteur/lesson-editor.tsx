@@ -162,7 +162,7 @@ export function LessonEditor({
             setChapters={setChapters}
           />
         )}
-        {type === "QUIZ" && <ExercicesBuilder value={quiz} onChange={setQuiz} />}
+        {type === "QUIZ" && <ExercicesBuilder value={quiz} onChange={setQuiz} blobEnabled={blobEnabled} />}
       </section>
 
       {/* Actions */}

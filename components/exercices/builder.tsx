@@ -12,7 +12,10 @@ import {
   type ExerciceType,
   type Blank,
   type QuizContent,
+  type Hotzone,
+  type ImgTarget,
 } from "@/lib/exercices/types";
+import { Uploader } from "@/components/upload/uploader";
 import { cn } from "@/lib/utils";
 
 const inputClass =
@@ -21,7 +24,15 @@ const smallInput =
   "h-9 rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-2 text-sm outline-none focus:border-orange-500";
 
 /** Builder d'un quiz : suite d'exercices auto-corrigés (concepteur). */
-export function ExercicesBuilder({ value, onChange }: { value: QuizContent; onChange: (v: QuizContent) => void }) {
+export function ExercicesBuilder({
+  value,
+  onChange,
+  blobEnabled = false,
+}: {
+  value: QuizContent;
+  onChange: (v: QuizContent) => void;
+  blobEnabled?: boolean;
+}) {
   const [newType, setNewType] = useState<ExerciceType>("QCU");
 
   const patch = (p: Partial<QuizContent>) => onChange({ ...value, ...p });
@@ -138,7 +149,7 @@ export function ExercicesBuilder({ value, onChange }: { value: QuizContent; onCh
           />
 
           <div className="mt-3">
-            <ExerciceConfig ex={ex} onUpdate={updateEx} />
+            <ExerciceConfig ex={ex} onUpdate={updateEx} blobEnabled={blobEnabled} />
           </div>
 
           <input
@@ -192,7 +203,7 @@ function IconBtn({ children, label, danger, disabled, onClick }: { children: Rea
 /* ============================================================
  *  Configurateurs par type
  * ============================================================ */
-function ExerciceConfig({ ex, onUpdate }: { ex: Exercice; onUpdate: (e: Exercice) => void }) {
+function ExerciceConfig({ ex, onUpdate, blobEnabled }: { ex: Exercice; onUpdate: (e: Exercice) => void; blobEnabled: boolean }) {
   switch (ex.type) {
     case "QCU":
       return <QCUConfig ex={ex} onUpdate={onUpdate} />;
@@ -210,6 +221,10 @@ function ExerciceConfig({ ex, onUpdate }: { ex: Exercice; onUpdate: (e: Exercice
       return <AppariementConfig ex={ex} onUpdate={onUpdate} />;
     case "CALCUL":
       return <CalculConfig ex={ex} onUpdate={onUpdate} />;
+    case "HOTSPOT":
+      return <HotspotConfig ex={ex} onUpdate={onUpdate} blobEnabled={blobEnabled} />;
+    case "GLISSER_DEPOSER_IMAGE":
+      return <EtiquetageImageConfig ex={ex} onUpdate={onUpdate} blobEnabled={blobEnabled} />;
     case "REPONSE_LONGUE":
       return <ReponseLongueConfig ex={ex} onUpdate={onUpdate} />;
     case "DEPOT_FICHIER":
@@ -577,6 +592,179 @@ function DepotFichierConfig({ ex, onUpdate }: Cfg<Extract<Exercice, { type: "DEP
           placeholder="Critères de correction du devoir…"
           className="w-full resize-y rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-3 text-sm outline-none focus:border-orange-500"
         />
+      </div>
+    </div>
+  );
+}
+
+/* --------- configurateurs image (hotspot / étiquetage) --------- */
+const clampPos = (v: number, size = 0) => Math.max(0, Math.min(100 - size, Math.round(v)));
+
+function ImageField({
+  imageUrl,
+  blobEnabled,
+  onUrl,
+}: {
+  imageUrl: string;
+  blobEnabled: boolean;
+  onUrl: (url: string) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <Uploader
+        blobEnabled={blobEnabled}
+        prefix="exercices"
+        accept="image/png,image/jpeg,image/webp,image/avif,image/gif"
+        maxMb={5}
+        compact
+        hint="Image de l'exercice — 5 Mo max."
+        onUploaded={async (r) => onUrl(r.url)}
+      />
+      <input
+        value={imageUrl}
+        onChange={(e) => onUrl(e.target.value)}
+        placeholder="…ou collez l'URL d'une image"
+        className={cn(smallInput, "w-full")}
+      />
+    </div>
+  );
+}
+
+function NumPct({ label, value, max = 100, onChange }: { label: string; value: number; max?: number; onChange: (v: number) => void }) {
+  return (
+    <label className="flex items-center gap-1 text-[11px] text-[var(--text-secondary)]">
+      {label}
+      <input
+        type="number"
+        min={0}
+        max={max}
+        value={value}
+        onChange={(e) => onChange(Math.max(0, Math.min(max, Number(e.target.value) || 0)))}
+        className={cn(smallInput, "w-14")}
+      />
+    </label>
+  );
+}
+
+function HotspotConfig({ ex, onUpdate, blobEnabled }: { ex: Extract<Exercice, { type: "HOTSPOT" }>; onUpdate: (e: Exercice) => void; blobEnabled: boolean }) {
+  const right = new Set(ex.correctAnswer);
+  const setData = (zones: Hotzone[], correctAnswer = ex.correctAnswer) => onUpdate({ ...ex, data: { ...ex.data, zones }, correctAnswer });
+  const updateZone = (id: string, patch: Partial<Hotzone>) => setData(ex.data.zones.map((z) => (z.id === id ? { ...z, ...patch } : z)));
+  const removeZone = (id: string) => setData(ex.data.zones.filter((z) => z.id !== id), ex.correctAnswer.filter((c) => c !== id));
+  const addZoneAt = (x: number, y: number) => {
+    const w = 16, h = 12;
+    setData([...ex.data.zones, { id: uid("z"), label: "", x: clampPos(x - w / 2, w), y: clampPos(y - h / 2, h), w, h }]);
+  };
+  const toggleCorrect = (id: string) => {
+    if (ex.data.multiple) {
+      const n = new Set(right);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      onUpdate({ ...ex, correctAnswer: [...n] });
+    } else {
+      onUpdate({ ...ex, correctAnswer: [id] });
+    }
+  };
+  const setMultiple = (multiple: boolean) =>
+    onUpdate({ ...ex, data: { ...ex.data, multiple }, correctAnswer: multiple ? ex.correctAnswer : ex.correctAnswer.slice(0, 1) });
+
+  return (
+    <div className="space-y-3">
+      <ImageField imageUrl={ex.data.imageUrl} blobEnabled={blobEnabled} onUrl={(url) => onUpdate({ ...ex, data: { ...ex.data, imageUrl: url } })} />
+      <Toggle label="Plusieurs zones correctes" checked={ex.data.multiple} onChange={setMultiple} />
+      {ex.data.imageUrl && (
+        <div
+          className="relative cursor-crosshair overflow-hidden rounded-lg border border-[var(--border-subtle)]"
+          onClick={(e) => {
+            const r = e.currentTarget.getBoundingClientRect();
+            addZoneAt(((e.clientX - r.left) / r.width) * 100, ((e.clientY - r.top) / r.height) * 100);
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={ex.data.imageUrl} alt="" className="block w-full select-none" />
+          {ex.data.zones.map((z, i) => (
+            <div
+              key={z.id}
+              style={{ left: `${z.x}%`, top: `${z.y}%`, width: `${z.w}%`, height: `${z.h}%` }}
+              className={cn(
+                "pointer-events-none absolute flex items-center justify-center rounded-md border-2 text-[10px] font-bold",
+                right.has(z.id) ? "border-green-500 bg-green-500/25 text-green-700" : "border-orange-500 bg-orange-500/20 text-orange-700"
+              )}
+            >
+              {i + 1}
+            </div>
+          ))}
+        </div>
+      )}
+      <p className="text-[11px] text-[var(--text-secondary)]">Cliquez sur l'image pour ajouter une zone, puis ajustez ses dimensions (%).</p>
+      <div className="space-y-2">
+        {ex.data.zones.map((z, i) => (
+          <div key={z.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--border-subtle)] p-2">
+            <span className="flex h-6 w-6 items-center justify-center rounded bg-[var(--bg-secondary)] text-xs font-bold">{i + 1}</span>
+            <input value={z.label} onChange={(e) => updateZone(z.id, { label: e.target.value })} placeholder="Libellé (ex. noyau)" className={cn(smallInput, "min-w-32 flex-1")} />
+            <NumPct label="x" value={z.x} onChange={(v) => updateZone(z.id, { x: v })} />
+            <NumPct label="y" value={z.y} onChange={(v) => updateZone(z.id, { y: v })} />
+            <NumPct label="l" value={z.w} onChange={(v) => updateZone(z.id, { w: v })} />
+            <NumPct label="h" value={z.h} onChange={(v) => updateZone(z.id, { h: v })} />
+            <label className="flex items-center gap-1 text-xs font-medium text-green-700 dark:text-green-300">
+              <input type={ex.data.multiple ? "checkbox" : "radio"} name={`hs-${ex.id}`} checked={right.has(z.id)} onChange={() => toggleCorrect(z.id)} className="h-4 w-4 accent-green-500" />
+              correcte
+            </label>
+            <IconBtn label="Supprimer la zone" danger onClick={() => removeZone(z.id)}>
+              <Trash2 className="h-4 w-4" />
+            </IconBtn>
+          </div>
+        ))}
+        {ex.data.zones.length === 0 && <p className="text-xs text-[var(--text-secondary)]">Aucune zone définie.</p>}
+      </div>
+    </div>
+  );
+}
+
+function EtiquetageImageConfig({ ex, onUpdate, blobEnabled }: { ex: Extract<Exercice, { type: "GLISSER_DEPOSER_IMAGE" }>; onUpdate: (e: Exercice) => void; blobEnabled: boolean }) {
+  const setTargets = (targets: ImgTarget[]) => onUpdate({ ...ex, data: { ...ex.data, targets } });
+  const updateTarget = (id: string, patch: Partial<ImgTarget>) => setTargets(ex.data.targets.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+  const removeTarget = (id: string) => setTargets(ex.data.targets.filter((t) => t.id !== id));
+  const addTargetAt = (x: number, y: number) => setTargets([...ex.data.targets, { id: uid("t"), label: "", x: clampPos(x), y: clampPos(y) }]);
+
+  return (
+    <div className="space-y-3">
+      <ImageField imageUrl={ex.data.imageUrl} blobEnabled={blobEnabled} onUrl={(url) => onUpdate({ ...ex, data: { ...ex.data, imageUrl: url } })} />
+      {ex.data.imageUrl && (
+        <div
+          className="relative cursor-crosshair overflow-hidden rounded-lg border border-[var(--border-subtle)]"
+          onClick={(e) => {
+            const r = e.currentTarget.getBoundingClientRect();
+            addTargetAt(((e.clientX - r.left) / r.width) * 100, ((e.clientY - r.top) / r.height) * 100);
+          }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={ex.data.imageUrl} alt="" className="block w-full select-none" />
+          {ex.data.targets.map((t, i) => (
+            <div
+              key={t.id}
+              style={{ left: `${t.x}%`, top: `${t.y}%` }}
+              className="pointer-events-none absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border-2 border-orange-500 bg-orange-500 px-2 py-0.5 text-[10px] font-bold text-white"
+            >
+              {t.label || i + 1}
+            </div>
+          ))}
+        </div>
+      )}
+      <p className="text-[11px] text-[var(--text-secondary)]">Cliquez sur l'image pour placer une cible, puis saisissez son étiquette (la bonne réponse).</p>
+      <div className="space-y-2">
+        {ex.data.targets.map((t, i) => (
+          <div key={t.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--border-subtle)] p-2">
+            <span className="flex h-6 w-6 items-center justify-center rounded bg-[var(--bg-secondary)] text-xs font-bold">{i + 1}</span>
+            <input value={t.label} onChange={(e) => updateTarget(t.id, { label: e.target.value })} placeholder="Étiquette correcte" className={cn(smallInput, "min-w-32 flex-1")} />
+            <NumPct label="x" value={t.x} onChange={(v) => updateTarget(t.id, { x: v })} />
+            <NumPct label="y" value={t.y} onChange={(v) => updateTarget(t.id, { y: v })} />
+            <IconBtn label="Supprimer la cible" danger onClick={() => removeTarget(t.id)}>
+              <Trash2 className="h-4 w-4" />
+            </IconBtn>
+          </div>
+        ))}
+        {ex.data.targets.length === 0 && <p className="text-xs text-[var(--text-secondary)]">Aucune cible définie.</p>}
       </div>
     </div>
   );

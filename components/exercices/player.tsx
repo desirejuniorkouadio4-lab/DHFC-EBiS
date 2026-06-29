@@ -1,7 +1,8 @@
 "use client";
 
-import { CheckCircle2, XCircle, ArrowUp, ArrowDown, Clock, Award, Paperclip, Download } from "lucide-react";
-import type { Exercice } from "@/lib/exercices/types";
+import { useState } from "react";
+import { CheckCircle2, XCircle, ArrowUp, ArrowDown, Clock, Award, Paperclip, Download, ImageOff } from "lucide-react";
+import { seededShuffle, type Exercice } from "@/lib/exercices/types";
 import type { GradeResult } from "@/lib/exercices/grade";
 import { submitAssignmentUrl } from "@/lib/lms/actions";
 import { Uploader } from "@/components/upload/uploader";
@@ -47,6 +48,10 @@ export function ExercicePlayer(props: PlayerProps) {
       return <AppariementPlayer {...props} exercice={exercice} />;
     case "CALCUL":
       return <CalculPlayer {...props} exercice={exercice} />;
+    case "HOTSPOT":
+      return <HotspotPlayer {...props} exercice={exercice} />;
+    case "GLISSER_DEPOSER_IMAGE":
+      return <EtiquetageImagePlayer {...props} exercice={exercice} />;
     case "REPONSE_LONGUE":
       return <ReponseLonguePlayer {...props} exercice={exercice} />;
     case "DEPOT_FICHIER":
@@ -449,6 +454,173 @@ function CalculPlayer({ exercice, answer, onChange, submitted, result }: PlayerP
           Réponse attendue : <strong>{exercice.correctAnswer}</strong>
           {exercice.data.unit ? ` ${exercice.data.unit}` : ""}
           {exercice.data.tolerance ? ` (± ${exercice.data.tolerance})` : ""}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/* --------- image (hotspot / étiquetage) --------- */
+function ImagePlaceholder() {
+  return (
+    <div className="flex aspect-video w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[var(--border-subtle)] bg-[var(--bg-secondary)] text-sm text-[var(--text-secondary)]">
+      <ImageOff className="h-4 w-4" /> Image non définie
+    </div>
+  );
+}
+
+function HotspotPlayer({ exercice, answer, onChange, submitted }: PlayerProps<Extract<Exercice, { type: "HOTSPOT" }>>) {
+  const { imageUrl, zones, multiple } = exercice.data;
+  const sel = new Set(Array.isArray(answer) ? (answer as string[]) : []);
+  const right = new Set(exercice.correctAnswer);
+  if (!imageUrl) return <ImagePlaceholder />;
+
+  function toggle(id: string) {
+    if (submitted) return;
+    if (multiple) {
+      const n = new Set(sel);
+      if (n.has(id)) n.delete(id);
+      else n.add(id);
+      onChange([...n]);
+    } else {
+      onChange(sel.has(id) ? [] : [id]);
+    }
+  }
+
+  return (
+    <div className="space-y-2">
+      <div className="relative overflow-hidden rounded-xl border border-[var(--border-subtle)]">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={imageUrl} alt={exercice.prompt} className="block w-full select-none" />
+        {zones.map((z, i) => {
+          const isSel = sel.has(z.id);
+          const isRight = right.has(z.id);
+          const state = submitted ? (isRight ? "right" : isSel ? "wrong" : "idle") : isSel ? "selected" : "idle";
+          return (
+            <button
+              key={z.id}
+              type="button"
+              disabled={submitted}
+              onClick={() => toggle(z.id)}
+              aria-label={`Zone ${i + 1}`}
+              style={{ left: `${z.x}%`, top: `${z.y}%`, width: `${z.w}%`, height: `${z.h}%` }}
+              className={cn(
+                "absolute rounded-md border-2 transition-colors",
+                state === "idle" && "border-white/70 bg-black/5 hover:bg-orange-500/20",
+                state === "selected" && "border-orange-500 bg-orange-500/30",
+                state === "right" && "border-green-500 bg-green-500/30",
+                state === "wrong" && "border-red-500 bg-red-500/30"
+              )}
+            >
+              {submitted && isRight && <CheckCircle2 className="absolute right-0.5 top-0.5 h-4 w-4 text-green-600" />}
+            </button>
+          );
+        })}
+      </div>
+      <p className="text-xs text-[var(--text-secondary)]">
+        {multiple ? "Cliquez toutes les bonnes zones." : "Cliquez la bonne zone."}
+      </p>
+      {submitted && (
+        <p className="text-xs text-[var(--text-secondary)]">
+          Bonne(s) zone(s) : {zones.filter((z) => right.has(z.id)).map((z) => z.label || "—").join(", ") || "—"}
+        </p>
+      )}
+    </div>
+  );
+}
+
+function EtiquetageImagePlayer({ exercice, answer, onChange, submitted }: PlayerProps<Extract<Exercice, { type: "GLISSER_DEPOSER_IMAGE" }>>) {
+  const { imageUrl, targets } = exercice.data;
+  const ans = (answer ?? {}) as Record<string, string>;
+  const [picked, setPicked] = useState<string | null>(null);
+  if (!imageUrl) return <ImagePlaceholder />;
+  const pool = seededShuffle(targets.map((t) => t.label).filter(Boolean), exercice.id);
+
+  function assign(targetId: string, label: string) {
+    if (submitted) return;
+    onChange({ ...ans, [targetId]: label });
+    setPicked(null);
+  }
+  function markerTap(targetId: string) {
+    if (submitted) return;
+    if (picked) {
+      assign(targetId, picked);
+    } else if (ans[targetId]) {
+      const next = { ...ans };
+      delete next[targetId];
+      onChange(next);
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <div className="flex flex-wrap gap-2">
+        {pool.map((label, i) => {
+          const active = picked === label;
+          return (
+            <button
+              key={`${label}-${i}`}
+              type="button"
+              disabled={submitted}
+              draggable={!submitted}
+              onDragStart={(e) => e.dataTransfer.setData("text/plain", label)}
+              onClick={() => setPicked(active ? null : label)}
+              className={cn(
+                "rounded-full border px-3 py-1.5 text-sm font-medium transition-colors",
+                active
+                  ? "border-orange-500 bg-orange-500 text-white"
+                  : "border-[var(--border-subtle)] bg-[var(--bg-secondary)] hover:border-orange-400",
+                !submitted && "cursor-grab active:cursor-grabbing"
+              )}
+            >
+              {label}
+            </button>
+          );
+        })}
+      </div>
+      <div className="relative overflow-hidden rounded-xl border border-[var(--border-subtle)]">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={imageUrl} alt={exercice.prompt} className="block w-full select-none" />
+        {targets.map((t, i) => {
+          const val = ans[t.id] ?? "";
+          const ok = submitted && val === t.label && t.label !== "";
+          const state = submitted ? (ok ? "right" : "wrong") : val ? "filled" : "empty";
+          return (
+            <button
+              key={t.id}
+              type="button"
+              disabled={submitted}
+              onClick={() => markerTap(t.id)}
+              onDragOver={(e) => {
+                if (!submitted) e.preventDefault();
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                const l = e.dataTransfer.getData("text/plain");
+                if (l) assign(t.id, l);
+              }}
+              style={{ left: `${t.x}%`, top: `${t.y}%` }}
+              className={cn(
+                "absolute -translate-x-1/2 -translate-y-1/2 whitespace-nowrap rounded-full border-2 px-2.5 py-1 text-xs font-semibold shadow-sm transition-colors",
+                state === "empty" && "border-dashed border-orange-400 bg-[var(--bg-primary)]/90 text-orange-600",
+                state === "filled" && "border-orange-500 bg-orange-500 text-white",
+                state === "right" && "border-green-500 bg-green-500 text-white",
+                state === "wrong" && "border-red-500 bg-red-500 text-white"
+              )}
+            >
+              {val || `${i + 1}`}
+            </button>
+          );
+        })}
+      </div>
+      {!submitted && (
+        <p className="text-xs text-[var(--text-secondary)]">
+          Sélectionnez une étiquette puis touchez sa zone — ou glissez-la directement (desktop).
+        </p>
+      )}
+      {submitted && (
+        <p className="text-xs text-[var(--text-secondary)]">
+          Attendu : {targets.map((t, i) => `${i + 1} → ${t.label || "—"}`).join(" · ")}
         </p>
       )}
     </div>

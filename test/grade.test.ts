@@ -67,6 +67,37 @@ describe("gradeExercice", () => {
     expect(gradeExercice(ex, "abc").score).toBe(0);
   });
 
+  it("HOTSPOT : crédit partiel + exact", () => {
+    const ex: Exercice = {
+      ...base,
+      type: "HOTSPOT",
+      data: { imageUrl: "/x.png", multiple: true, zones: [
+        { id: "a", label: "", x: 0, y: 0, w: 10, h: 10 },
+        { id: "b", label: "", x: 0, y: 0, w: 10, h: 10 },
+        { id: "c", label: "", x: 0, y: 0, w: 10, h: 10 },
+      ] },
+      correctAnswer: ["a", "b"],
+    };
+    expect(gradeExercice(ex, ["a", "b"]).correct).toBe(true);
+    expect(gradeExercice(ex, ["a"]).score).toBeCloseTo(0.5);
+    expect(gradeExercice(ex, ["a", "c"]).score).toBe(0); // 0.5 - 0.5
+    expect(gradeExercice(ex, ["a", "b", "c"]).correct).toBe(false);
+  });
+
+  it("GLISSER_DEPOSER_IMAGE : fraction de cibles bien étiquetées", () => {
+    const ex: Exercice = {
+      ...base,
+      type: "GLISSER_DEPOSER_IMAGE",
+      data: { imageUrl: "/x.png", targets: [
+        { id: "t1", label: "noyau", x: 10, y: 10 },
+        { id: "t2", label: "membrane", x: 20, y: 20 },
+      ] },
+    };
+    expect(gradeExercice(ex, { t1: "noyau", t2: "membrane" }).score).toBe(1);
+    expect(gradeExercice(ex, { t1: "noyau", t2: "noyau" }).score).toBeCloseTo(0.5);
+    expect(gradeExercice(ex, {}).score).toBe(0);
+  });
+
   it("REPONSE_LONGUE / DEPOT_FICHIER : manuel (0, non corrigé auto)", () => {
     const essay: Exercice = { ...base, type: "REPONSE_LONGUE", data: { minWords: 0, maxWords: 0, rubric: "" } };
     expect(gradeExercice(essay, "un texte").correct).toBe(false);

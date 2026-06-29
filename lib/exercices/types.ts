@@ -13,6 +13,8 @@ export const EXERCICE_TYPES = [
   "ORDONNANCEMENT",
   "APPARIEMENT",
   "CALCUL",
+  "HOTSPOT",
+  "GLISSER_DEPOSER_IMAGE",
   "REPONSE_LONGUE",
   "DEPOT_FICHIER",
 ] as const;
@@ -28,6 +30,10 @@ export function isManualType(type: ExerciceType): boolean {
 export type Option = { id: string; text: string };
 export type OrderItem = { id: string; text: string };
 export type Blank = { id: number; type: "text" | "select"; options?: string[] };
+/** Zone rectangulaire cliquable d'une image (HOTSPOT). x/y/w/h en % (0–100). */
+export type Hotzone = { id: string; label: string; x: number; y: number; w: number; h: number };
+/** Point cible d'étiquetage d'image (GLISSER_DEPOSER_IMAGE). x/y en % (0–100). */
+export type ImgTarget = { id: string; label: string; x: number; y: number };
 
 type Base = { id: string; prompt: string; points: number; feedback?: string };
 
@@ -44,6 +50,8 @@ export type Exercice =
   | (Base & { type: "ORDONNANCEMENT"; data: { items: OrderItem[] }; correctAnswer: string[] })
   | (Base & { type: "APPARIEMENT"; data: { leftItems: Option[]; rightItems: Option[] }; correctAnswer: Record<string, string> })
   | (Base & { type: "CALCUL"; data: { tolerance: number; unit: string | null }; correctAnswer: number })
+  | (Base & { type: "HOTSPOT"; data: { imageUrl: string; zones: Hotzone[]; multiple: boolean }; correctAnswer: string[] })
+  | (Base & { type: "GLISSER_DEPOSER_IMAGE"; data: { imageUrl: string; targets: ImgTarget[] } })
   | (Base & { type: "REPONSE_LONGUE"; data: { minWords: number; maxWords: number; rubric: string } })
   | (Base & { type: "DEPOT_FICHIER"; data: { acceptHint: string; maxMb: number; rubric: string } });
 
@@ -68,6 +76,8 @@ export type AnswerByType = {
   ORDONNANCEMENT: string[];
   APPARIEMENT: Record<string, string>;
   CALCUL: string;
+  HOTSPOT: string[];
+  GLISSER_DEPOSER_IMAGE: Record<string, string>;
   REPONSE_LONGUE: string;
   DEPOT_FICHIER: string;
 };
@@ -81,6 +91,8 @@ export const TYPE_LABEL: Record<ExerciceType, string> = {
   ORDONNANCEMENT: "Ordonnancement",
   APPARIEMENT: "Appariement",
   CALCUL: "Calcul",
+  HOTSPOT: "Zone à cliquer (image)",
+  GLISSER_DEPOSER_IMAGE: "Étiquetage d'image",
   REPONSE_LONGUE: "Réponse longue",
   DEPOT_FICHIER: "Dépôt de fichier",
 };
@@ -94,6 +106,8 @@ export const TYPE_HINT: Record<ExerciceType, string> = {
   ORDONNANCEMENT: "Remettre des éléments dans le bon ordre.",
   APPARIEMENT: "Relier chaque élément de gauche au bon élément de droite.",
   CALCUL: "Résultat numérique avec tolérance.",
+  HOTSPOT: "Cliquer la ou les bonnes zones d'une image.",
+  GLISSER_DEPOSER_IMAGE: "Glisser des étiquettes sur les bonnes zones d'une image.",
   REPONSE_LONGUE: "Texte développé, corrigé manuellement par le tuteur.",
   DEPOT_FICHIER: "Devoir à déposer (PDF, image…), corrigé par le tuteur.",
 };
@@ -161,6 +175,10 @@ export function createExercice(type: ExerciceType): Exercice {
       };
     case "CALCUL":
       return { ...base, type, data: { tolerance: 0, unit: null }, correctAnswer: 0 };
+    case "HOTSPOT":
+      return { ...base, type, data: { imageUrl: "", zones: [], multiple: false }, correctAnswer: [] };
+    case "GLISSER_DEPOSER_IMAGE":
+      return { ...base, type, data: { imageUrl: "", targets: [] } };
     case "REPONSE_LONGUE":
       return { ...base, type, data: { minWords: 0, maxWords: 0, rubric: "" } };
     case "DEPOT_FICHIER":
@@ -174,6 +192,7 @@ export function emptyAnswer(ex: Exercice): unknown {
     case "QCU":
       return "";
     case "QCM":
+    case "HOTSPOT":
       return [];
     case "VRAI_FAUX":
       return null;
@@ -183,6 +202,7 @@ export function emptyAnswer(ex: Exercice): unknown {
     case "DEPOT_FICHIER":
       return "";
     case "TEXTE_A_TROUS":
+    case "GLISSER_DEPOSER_IMAGE":
       return {};
     case "ORDONNANCEMENT":
       return seededShuffle(ex.data.items.map((i) => i.id), ex.id);
