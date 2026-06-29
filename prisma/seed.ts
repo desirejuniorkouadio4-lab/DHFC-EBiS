@@ -210,16 +210,23 @@ async function main() {
   }
   const TUTOR_NAME = "Fatou Diabaté";
 
-  // --- Cohortes (tuteur attitré : Fatou Diabaté) ---
+  // Second tuteur (pour la comparaison côté encadreur).
+  const tutor2 = await prisma.user.create({
+    data: { email: "tuteur2@dhfc.dpfc.ci", passwordHash: staffPassword, firstName: "Brou", lastName: "Kouassi", role: "TUTEUR", bivalence: "Maths · TICE", region: "Abidjan", dren: "DREN Abidjan 4", college: "DPFC — Plateau" },
+  });
+  const TUTOR2_NAME = "Brou Kouassi";
+
+  // --- Cohortes (tuteurs attitrés : Fatou → PC/SVT, Brou → Transversal) ---
   const cohortPCSVT = await prisma.cohort.create({ data: { name: "Cohorte Mars 2026 — PC/SVT", tutorId } });
-  const cohortTransversal = await prisma.cohort.create({ data: { name: "Cohorte Mars 2026 — Transversal", tutorId } });
+  const cohortTransversal = await prisma.cohort.create({ data: { name: "Cohorte Mars 2026 — Transversal", tutorId: tutor2.id } });
+  const tutorNameByCohort: Record<string, string> = { [cohortPCSVT.id]: TUTOR_NAME, [cohortTransversal.id]: TUTOR2_NAME };
 
   // Inscrit un apprenant à un parcours + génère sa progression (date de dernière activité).
   async function enrollLearner(userId: string, slug: string, cohortId: string, baseline: number, lastActiveDaysAgo: number) {
     const parcours = await prisma.parcours.findUnique({ where: { slug } });
     if (!parcours) return;
     await prisma.enrollment.create({
-      data: { userId, parcoursId: parcours.id, cohortId, tutorName: TUTOR_NAME, progress: baseline },
+      data: { userId, parcoursId: parcours.id, cohortId, tutorName: tutorNameByCohort[cohortId] ?? TUTOR_NAME, progress: baseline },
     });
     const ids = lessonsBySlug[slug] ?? [];
     const count = Math.round((baseline / 100) * ids.length);
