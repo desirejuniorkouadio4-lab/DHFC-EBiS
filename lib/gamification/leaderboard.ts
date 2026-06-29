@@ -26,7 +26,8 @@ export async function getCohortLeaderboard(userId: string): Promise<Leaderboard>
   if (cohortIds.length === 0) return { rows: [], myRank: null };
 
   const enrollments = await prisma.enrollment.findMany({
-    where: { cohortId: { in: cohortIds }, user: { role: "APPRENANT" } },
+    // Confidentialité : seuls les apprenants ayant accepté d'apparaître au classement.
+    where: { cohortId: { in: cohortIds }, user: { role: "APPRENANT", showInLeaderboard: true } },
     select: { user: { select: { id: true, firstName: true, lastName: true, xp: true, level: true } } },
   });
 

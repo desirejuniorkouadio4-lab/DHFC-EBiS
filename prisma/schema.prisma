@@ -63,6 +63,17 @@ model User {
   streak       Int              @default(0)
   active       Boolean          @default(true)
   passwordHash String?
+  // Profil
+  phone        String?
+  bio          String?          @db.Text
+  // Confidentialité / RGPD (§25.3) — contrôle de l'utilisateur sur ses données
+  profileVisibility String      @default("COHORT") // PUBLIC | COHORT | PRIVATE
+  showInLeaderboard Boolean     @default(true) // apparaître au classement (opt-out)
+  allowMessages     Boolean     @default(true) // autoriser les messages privés
+  showActivity      Boolean     @default(true) // exposer l'activité aux pairs
+  emailNotif        Boolean     @default(true)
+  weeklyDigest      Boolean     @default(false)
+  marketingConsent  Boolean     @default(false) // consentement communications non essentielles
   enrollments    Enrollment[]
   progress       LessonProgress[]
   badges         UserBadge[]

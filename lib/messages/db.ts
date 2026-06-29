@@ -24,17 +24,18 @@ export async function getContacts(userId: string): Promise<Contact[]> {
   const [enrollments, cohorts] = await Promise.all([
     prisma.enrollment.findMany({
       where: { cohortId: { in: cohortIds } },
-      select: { user: { select: { id: true, firstName: true, lastName: true, role: true, active: true } } },
+      select: { user: { select: { id: true, firstName: true, lastName: true, role: true, active: true, allowMessages: true } } },
     }),
     prisma.cohort.findMany({
       where: { id: { in: cohortIds } },
-      select: { tutor: { select: { id: true, firstName: true, lastName: true, role: true, active: true } } },
+      select: { tutor: { select: { id: true, firstName: true, lastName: true, role: true, active: true, allowMessages: true } } },
     }),
   ]);
 
   const map = new Map<string, Contact>();
-  const add = (u: { id: string; firstName: string; lastName: string; role: string; active: boolean } | null) => {
-    if (!u || !u.active || u.id === userId) return;
+  // Confidentialité : exclut les comptes ayant désactivé les messages privés.
+  const add = (u: { id: string; firstName: string; lastName: string; role: string; active: boolean; allowMessages: boolean } | null) => {
+    if (!u || !u.active || !u.allowMessages || u.id === userId) return;
     map.set(u.id, { id: u.id, name: `${u.firstName} ${u.lastName}`, role: u.role });
   };
   for (const e of enrollments) add(e.user);
