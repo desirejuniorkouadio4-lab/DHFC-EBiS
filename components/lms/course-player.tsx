@@ -19,6 +19,9 @@ import {
   Maximize,
   Download,
   Check,
+  Timer,
+  Lock,
+  AlertTriangle,
 } from "lucide-react";
 import { LogoMark } from "@/components/brand/logo";
 import { ProgressBar } from "@/components/lms/progress-bar";
@@ -487,6 +490,33 @@ function QuizView({
   const [submitted, setSubmitted] = useState(false);
   const [pending, startTransition] = useTransition();
 
+  // --- Mode examen (§13.5) ---
+  const isExam = quiz.mode === "exam";
+  const timeLimit = quiz.timeLimitMin ?? 0;
+  const [examStarted, setExamStarted] = useState(!isExam);
+  const [remaining, setRemaining] = useState(timeLimit * 60);
+  const [blurCount, setBlurCount] = useState(0);
+
+  // Minuterie : décompte chaque seconde, auto-soumission à 0.
+  useEffect(() => {
+    if (!isExam || !examStarted || submitted || timeLimit <= 0) return;
+    if (remaining <= 0) {
+      submit();
+      return;
+    }
+    const t = setTimeout(() => setRemaining((r) => r - 1), 1000);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isExam, examStarted, submitted, remaining, timeLimit]);
+
+  // Surveillance : perte de focus de la fenêtre pendant l'examen.
+  useEffect(() => {
+    if (!isExam || !examStarted || submitted) return;
+    const onBlur = () => setBlurCount((c) => c + 1);
+    window.addEventListener("blur", onBlur);
+    return () => window.removeEventListener("blur", onBlur);
+  }, [isExam, examStarted, submitted]);
+
   if (quiz.exercices.length === 0) {
     return (
       <div className="rounded-2xl border border-dashed border-[var(--border-subtle)] p-8 text-center">
@@ -503,8 +533,65 @@ function QuizView({
   const hasPendingAction = quiz.exercices.some((e) => !isManualType(e.type) || !submissions[e.id]);
   const graded = submitted ? gradeQuiz(quiz.exercices, answers) : null;
   const passed = graded ? graded.percent >= quiz.passScore : false;
+  const fmtTime = (s: number) =>
+    `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
+
+  // Écran de garde de l'examen : présentation des règles avant de démarrer.
+  if (isExam && !examStarted) {
+    return (
+      <div className="rounded-2xl border border-orange-500/30 bg-orange-50 p-6 dark:bg-orange-500/10">
+        <div className="flex items-center gap-2 text-orange-700 dark:text-orange-300">
+          <Lock className="h-5 w-5" />
+          <h3 className="text-base font-bold">Mode examen</h3>
+        </div>
+        {quiz.intro && <p className="mt-3 text-sm text-[var(--text-secondary)]">{quiz.intro}</p>}
+        <p className="mt-3 text-sm font-medium">Avant de commencer, veuillez noter :</p>
+        <ul className="mt-2 space-y-1.5 text-sm text-[var(--text-secondary)]">
+          <li className="flex items-start gap-2">
+            <Check className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" />
+            Une seule tentative — vos réponses sont définitives.
+          </li>
+          {timeLimit > 0 && (
+            <li className="flex items-start gap-2">
+              <Timer className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" />
+              Durée limitée à {timeLimit} min ; la soumission est automatique à la fin du temps.
+            </li>
+          )}
+          <li className="flex items-start gap-2">
+            <Maximize className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" />
+            L'examen s'ouvre en plein écran ; quitter la fenêtre est enregistré.
+          </li>
+          <li className="flex items-start gap-2">
+            <Target className="mt-0.5 h-4 w-4 shrink-0 text-orange-500" />
+            Seul le score final est affiché, sans correction détaillée.
+          </li>
+        </ul>
+        <button
+          type="button"
+          onClick={startExam}
+          className="mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-orange-500 px-6 text-sm font-semibold text-white transition-colors hover:bg-orange-600"
+        >
+          <Play className="h-4 w-4" />
+          Démarrer l'examen
+        </button>
+      </div>
+    );
+  }
+
+  function startExam() {
+    setExamStarted(true);
+    setRemaining(timeLimit * 60);
+    try {
+      void document.documentElement.requestFullscreen?.();
+    } catch {
+      /* plein écran refusé : on continue quand même */
+    }
+  }
 
   function submit() {
+    if (isExam && typeof document !== "undefined" && document.fullscreenElement) {
+      void document.exitFullscreen?.().catch(() => {});
+    }
     // Persiste les réponses longues non encore soumises.
     const essays = quiz.exercices
       .filter((ex) => isManualType(ex.type) && !submissions[ex.id])
@@ -525,10 +612,46 @@ function QuizView({
     if (!hasAuto || g.percent >= quiz.passScore) onPass();
   }
 
-  return (
-    <div>
-      {quiz.intro && <p className="leading-relaxed text-[var(--text-secondary)]">{quiz.intro}</p>}
+  const examLocked = isExam && examStarted && !submitted;
 
+  return (
+    <div
+      onCopy={isExam ? (e) => e.preventDefault() : undefined}
+      onCut={isExam ? (e) => e.preventDefault() : undefined}
+      onContextMenu={examLocked ? (e) => e.preventDefault() : undefined}
+    >
+      {/* Bandeau examen : minuterie + surveillance */}
+      {examLocked && (
+        <div className="sticky top-16 z-20 mb-5 flex items-center justify-between gap-3 rounded-xl border border-orange-500/40 bg-[var(--bg-elevated)] px-4 py-2.5 shadow-sm">
+          <span className="flex items-center gap-2 text-sm font-semibold text-orange-700 dark:text-orange-300">
+            <Lock className="h-4 w-4" /> Examen en cours
+          </span>
+          {timeLimit > 0 && (
+            <span
+              className={cn(
+                "flex items-center gap-1.5 font-mono text-sm font-bold tabular-nums",
+                remaining <= 60 ? "text-red-500" : "text-orange-600 dark:text-orange-300"
+              )}
+            >
+              <Timer className="h-4 w-4" />
+              {fmtTime(Math.max(0, remaining))}
+            </span>
+          )}
+        </div>
+      )}
+      {examLocked && blurCount > 0 && (
+        <div className="mb-5 flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-50 px-4 py-2.5 text-sm text-red-700 dark:bg-red-500/10 dark:text-red-300">
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+          Vous avez quitté la fenêtre d'examen {blurCount} fois. Restez sur cette page jusqu'à la
+          fin de l'épreuve.
+        </div>
+      )}
+
+      {!isExam && quiz.intro && (
+        <p className="leading-relaxed text-[var(--text-secondary)]">{quiz.intro}</p>
+      )}
+
+      {(!isExam || !submitted) && (
       <div className="mt-6 space-y-6">
         {quiz.exercices.map((ex: Exercice, qi) => {
           const res = graded?.results[ex.id];
@@ -568,6 +691,7 @@ function QuizView({
           );
         })}
       </div>
+      )}
 
       {!submitted && hasPendingAction ? (
         <button
@@ -576,7 +700,7 @@ function QuizView({
           disabled={pending}
           className="mt-6 inline-flex h-11 items-center justify-center gap-2 rounded-full bg-orange-500 px-6 text-sm font-semibold text-white transition-colors hover:bg-orange-600 disabled:opacity-60"
         >
-          Valider mes réponses
+          {isExam ? "Terminer et soumettre l'examen" : "Valider mes réponses"}
         </button>
       ) : !submitted ? null : !hasAuto ? (
         <div className="mt-6 flex items-center gap-4 rounded-2xl border border-green-500/30 bg-green-50 p-5 dark:bg-green-500/10">
@@ -602,13 +726,22 @@ function QuizView({
           </span>
           <div className="min-w-0">
             <p className="font-bold">
-              {passed ? "Bravo, évaluation réussie !" : "Presque ! Réessayez."} {graded?.percent} %
+              {passed
+                ? "Bravo, évaluation réussie !"
+                : isExam
+                  ? "Examen terminé."
+                  : "Presque ! Réessayez."}{" "}
+              {graded?.percent} %
             </p>
             <p className="text-sm text-[var(--text-secondary)]">
-              {passed ? "Cette leçon est validée." : `Le seuil de réussite est de ${quiz.passScore} %.`}
+              {passed
+                ? "Cette leçon est validée."
+                : isExam
+                  ? `Score en dessous du seuil de ${quiz.passScore} %. Tentative unique : le résultat est définitif.`
+                  : `Le seuil de réussite est de ${quiz.passScore} %.`}
             </p>
           </div>
-          {!passed && (
+          {!passed && !isExam && (
             <button
               onClick={() => {
                 setSubmitted(false);

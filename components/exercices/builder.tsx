@@ -65,6 +65,36 @@ export function ExercicesBuilder({ value, onChange }: { value: QuizContent; onCh
         </div>
       </div>
 
+      {/* Mode et durée */}
+      <div className="flex flex-wrap items-end gap-4 rounded-xl border border-[var(--border-subtle)] p-3">
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">Mode</label>
+          <select
+            value={value.mode ?? "practice"}
+            onChange={(e) => patch({ mode: e.target.value as "practice" | "exam" })}
+            className={cn(inputClass, "w-44")}
+          >
+            <option value="practice">Entraînement</option>
+            <option value="exam">Examen</option>
+          </select>
+        </div>
+        <div className="space-y-1.5">
+          <label className="text-sm font-medium">Durée limite (min)</label>
+          <input
+            type="number"
+            min={0}
+            value={value.timeLimitMin ?? 0}
+            onChange={(e) => patch({ timeLimitMin: Math.max(0, Number(e.target.value) || 0) })}
+            className={cn(inputClass, "w-28")}
+          />
+        </div>
+        {value.mode === "exam" && (
+          <p className="min-w-0 flex-1 text-xs text-amber-700 dark:text-amber-300">
+            Mode examen : tentative unique, sans retour en arrière ni correction détaillée, plein écran et détection de perte de focus.
+          </p>
+        )}
+      </div>
+
       {value.exercices.length === 0 && (
         <p className="rounded-xl border border-dashed border-[var(--border-subtle)] p-6 text-center text-sm text-[var(--text-secondary)]">
           Aucun exercice. Choisissez un type et ajoutez-en un.

@@ -1,4 +1,4 @@
-import { type Exercice, type QuizContent } from "./types";
+import { type Exercice, type QuizContent, type QuizMode } from "./types";
 
 /**
  * Normalise le contenu d'une leçon QUIZ vers le format `QuizContent` (exercices).
@@ -10,9 +10,11 @@ export function normalizeQuizContent(content: unknown): QuizContent {
   const c = (content && typeof content === "object" ? content : {}) as Record<string, unknown>;
   const intro = typeof c.intro === "string" ? c.intro : "";
   const passScore = typeof c.passScore === "number" ? c.passScore : 60;
+  const mode: QuizMode = c.mode === "exam" ? "exam" : "practice";
+  const timeLimitMin = typeof c.timeLimitMin === "number" ? c.timeLimitMin : 0;
 
   if (Array.isArray(c.exercices)) {
-    return { kind: "quiz", intro, passScore, exercices: c.exercices as Exercice[] };
+    return { kind: "quiz", intro, passScore, exercices: c.exercices as Exercice[], mode, timeLimitMin };
   }
 
   if (Array.isArray(c.questions)) {
@@ -33,8 +35,8 @@ export function normalizeQuizContent(content: unknown): QuizContent {
         correctAnswer: options[correctIdx]?.id ?? "",
       };
     });
-    return { kind: "quiz", intro, passScore, exercices };
+    return { kind: "quiz", intro, passScore, exercices, mode, timeLimitMin };
   }
 
-  return { kind: "quiz", intro, passScore, exercices: [] };
+  return { kind: "quiz", intro, passScore, exercices: [], mode, timeLimitMin };
 }

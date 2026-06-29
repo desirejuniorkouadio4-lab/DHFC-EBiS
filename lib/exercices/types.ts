@@ -47,11 +47,15 @@ export type Exercice =
   | (Base & { type: "REPONSE_LONGUE"; data: { minWords: number; maxWords: number; rubric: string } })
   | (Base & { type: "DEPOT_FICHIER"; data: { acceptHint: string; maxMb: number; rubric: string } });
 
+export type QuizMode = "practice" | "exam";
+
 export type QuizContent = {
   kind: "quiz";
   intro: string;
   passScore: number; // seuil de réussite (%)
   exercices: Exercice[];
+  mode?: QuizMode; // "exam" = mode examen (§13.5)
+  timeLimitMin?: number; // limite de temps en minutes (0 = aucune)
 };
 
 /** Réponse d'un apprenant pour un exercice donné (forme dépend du type). */

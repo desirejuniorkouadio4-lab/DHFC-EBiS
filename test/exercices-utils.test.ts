@@ -54,4 +54,18 @@ describe("normalizeQuizContent (legacy)", () => {
   it("contenu vide → quiz vide", () => {
     expect(normalizeQuizContent(null).exercices).toEqual([]);
   });
+  it("mode/durée par défaut : entraînement, sans limite", () => {
+    const q = normalizeQuizContent({ kind: "quiz", exercices: [] });
+    expect(q.mode).toBe("practice");
+    expect(q.timeLimitMin).toBe(0);
+  });
+  it("conserve le mode examen et la limite de temps", () => {
+    const q = normalizeQuizContent({ kind: "quiz", exercices: [], mode: "exam", timeLimitMin: 45 });
+    expect(q.mode).toBe("exam");
+    expect(q.timeLimitMin).toBe(45);
+  });
+  it("mode invalide → entraînement", () => {
+    const q = normalizeQuizContent({ kind: "quiz", exercices: [], mode: "bogus" });
+    expect(q.mode).toBe("practice");
+  });
 });
