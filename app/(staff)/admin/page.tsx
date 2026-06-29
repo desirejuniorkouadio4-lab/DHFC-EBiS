@@ -17,6 +17,8 @@ import {
 import { requireRole } from "@/lib/auth-helpers";
 import { getAdminStats } from "@/lib/admin/db";
 import { roleLabel } from "@/lib/rbac";
+import { impersonateRole } from "@/lib/admin/impersonate";
+import { Eye, LogIn } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +61,32 @@ export default async function AdminPage() {
         <QuickLink href="/admin/analytics" icon={BarChart3} title="Analytique" desc="Activité, rôles, complétion." />
         <QuickLink href="/admin/parametres" icon={Settings} title="Paramètres" desc="Annonce, maintenance, intégrations." />
       </div>
+
+      {/* Prendre un rôle (impersonation) */}
+      <section className="rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-6">
+        <h2 className="flex items-center gap-2 font-bold">
+          <Eye className="h-5 w-5 text-orange-500" /> Voir la plateforme en tant que…
+        </h2>
+        <p className="mt-1 text-sm text-[var(--text-secondary)]">
+          Prenez n'importe quel rôle pour tester l'expérience, ou{" "}
+          <Link href="/admin/utilisateurs" className="font-semibold text-orange-600 hover:underline">
+            connectez-vous comme un utilisateur précis
+          </Link>
+          . Le retour à votre compte est immédiat via le bandeau.
+        </p>
+        <div className="mt-4 flex flex-wrap gap-2">
+          {["APPRENANT", "TUTEUR", "ENCADREUR", "CONCEPTEUR"].map((r) => (
+            <form key={r} action={impersonateRole.bind(null, r)}>
+              <button
+                type="submit"
+                className="inline-flex h-10 items-center gap-2 rounded-full border border-[var(--border-subtle)] px-4 text-sm font-semibold transition-colors hover:border-orange-400 hover:text-orange-600"
+              >
+                <LogIn className="h-4 w-4" /> {roleLabel(r)}
+              </button>
+            </form>
+          ))}
+        </div>
+      </section>
 
       <div className="grid gap-6 lg:grid-cols-2">
         {/* Parcours les plus suivis */}

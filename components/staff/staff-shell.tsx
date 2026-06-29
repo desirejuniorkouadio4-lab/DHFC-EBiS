@@ -18,6 +18,7 @@ import { Logo, LogoMark } from "@/components/brand/logo";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { roleLabel } from "@/lib/rbac";
 import { staffNav, type NavItem } from "@/components/staff/staff-nav";
+import { ImpersonationBanner } from "@/components/staff/impersonation-banner";
 import { cn } from "@/lib/utils";
 
 const STORAGE_KEY = "dhfc-staff-sidebar-collapsed";
@@ -28,11 +29,15 @@ export function StaffShell({
   name,
   initials,
   children,
+  impersonating,
+  impersonatorName,
 }: {
   role: string;
   name: string;
   initials: string;
   children: React.ReactNode;
+  impersonating?: boolean;
+  impersonatorName?: string;
 }) {
   const pathname = usePathname();
   const nav = staffNav(role);
@@ -94,6 +99,7 @@ export function StaffShell({
       </AnimatePresence>
 
       <div className={cn("transition-all duration-200", mounted ? railPad : "lg:pl-64")}>
+        {impersonating && <ImpersonationBanner name={name} role={role} by={impersonatorName} />}
         {/* Topbar */}
         <header className="sticky top-0 z-30 border-b border-[var(--border-subtle)] bg-[var(--bg-primary)]/85 backdrop-blur">
           <div className="flex h-16 items-center justify-between gap-4 px-4 sm:px-6">

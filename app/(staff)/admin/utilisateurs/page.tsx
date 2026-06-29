@@ -1,8 +1,9 @@
 import Link from "next/link";
-import { ArrowLeft, Check, Power, ShieldCheck, Inbox, Download, UserPlus, CheckCircle2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Check, Power, ShieldCheck, Inbox, Download, UserPlus, CheckCircle2, AlertTriangle, LogIn } from "lucide-react";
 import { requireRole } from "@/lib/auth-helpers";
 import { listUsers } from "@/lib/admin/db";
 import { setUserRole, toggleUserActive } from "@/lib/admin/actions";
+import { startImpersonation } from "@/lib/admin/impersonate";
 import { UserSearch } from "@/components/admin/user-search";
 import { CsvImport } from "@/components/admin/csv-import";
 import { IconSubmit } from "@/components/concepteur/submit-button";
@@ -136,21 +137,34 @@ export default async function AdminUsersPage({
                   </form>
                 )}
 
-                {/* Activation */}
+                {/* Activation + impersonation */}
                 {!isSelf && (
-                  <form action={toggleUserActive.bind(null, u.id)} className="self-start lg:self-auto">
-                    <button
-                      type="submit"
-                      title={u.active ? "Désactiver le compte" : "Réactiver le compte"}
-                      className={`inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-colors ${
-                        u.active
-                          ? "border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-red-300 hover:text-red-600"
-                          : "border-green-300 text-green-600 hover:bg-green-50 dark:hover:bg-green-500/10"
-                      }`}
-                    >
-                      <Power className="h-3.5 w-3.5" /> {u.active ? "Désactiver" : "Réactiver"}
-                    </button>
-                  </form>
+                  <div className="flex items-center gap-1.5 self-start lg:self-auto">
+                    {u.active && (
+                      <form action={startImpersonation.bind(null, u.id)}>
+                        <button
+                          type="submit"
+                          title={`Se connecter en tant que ${u.name}`}
+                          className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[var(--border-subtle)] px-3 text-xs font-semibold text-[var(--text-secondary)] transition-colors hover:border-orange-400 hover:text-orange-600"
+                        >
+                          <LogIn className="h-3.5 w-3.5" /> Se connecter en tant que
+                        </button>
+                      </form>
+                    )}
+                    <form action={toggleUserActive.bind(null, u.id)}>
+                      <button
+                        type="submit"
+                        title={u.active ? "Désactiver le compte" : "Réactiver le compte"}
+                        className={`inline-flex h-9 items-center gap-1.5 rounded-lg border px-3 text-xs font-semibold transition-colors ${
+                          u.active
+                            ? "border-[var(--border-subtle)] text-[var(--text-secondary)] hover:border-red-300 hover:text-red-600"
+                            : "border-green-300 text-green-600 hover:bg-green-50 dark:hover:bg-green-500/10"
+                        }`}
+                      >
+                        <Power className="h-3.5 w-3.5" /> {u.active ? "Désactiver" : "Réactiver"}
+                      </button>
+                    </form>
+                  </div>
                 )}
               </li>
             );

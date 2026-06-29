@@ -24,6 +24,7 @@ import {
 import { Logo } from "@/components/brand/logo";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { BottomTabBar, type TabItem } from "@/components/layout/bottom-tab-bar";
+import { ImpersonationBanner } from "@/components/staff/impersonation-banner";
 import type { SessionUser } from "@/lib/auth-helpers";
 import { cn } from "@/lib/utils";
 
@@ -93,6 +94,7 @@ export function AppShell({ user, children }: { user: SessionUser; children: Reac
 
       {/* Zone principale */}
       <div className="lg:pl-64">
+        {user.impersonating && <ImpersonationBanner name={`${user.firstName} ${user.lastName}`} role={user.role} by={user.impersonatorName} />}
         {/* Topbar */}
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-[var(--border-subtle)] bg-[var(--bg-primary)]/85 px-4 backdrop-blur sm:px-6">
           <div className="flex items-center gap-3">
