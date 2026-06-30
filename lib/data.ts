@@ -316,6 +316,15 @@ export type Partenaire = {
   logoUrl?: string | null;
 };
 
+export type Ressource = {
+  id: string;
+  title: string;
+  type: string;
+  category: string;
+  size: string | null;
+  url: string | null;
+};
+
 /** Logos partenaires (public/), par acronyme. Sinon repli sur l'acronyme. */
 export const PARTENAIRE_LOGOS: Record<string, string> = {
   MENAET: "/logo-menaet.jpg",

@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import type { Parcours, Actualite, Partenaire, Temoignage } from "@/lib/data";
+import type { Parcours, Actualite, Partenaire, Temoignage, Ressource } from "@/lib/data";
 import { PARTENAIRE_LOGOS } from "@/lib/data";
 import type { ProgrammeModule } from "@/components/marketing/programme-accordion";
 
@@ -141,7 +141,7 @@ export async function getSimilarParcours(slug: string, disciplineSlug: string, l
 }
 
 export async function getActualites(): Promise<Actualite[]> {
-  const rows = await prisma.actualite.findMany({ orderBy: { publishedAt: "desc" } });
+  const rows = await prisma.actualite.findMany({ where: { published: true }, orderBy: { publishedAt: "desc" } });
   return rows.map((a) => ({
     slug: a.slug,
     title: a.title,
@@ -153,22 +153,34 @@ export async function getActualites(): Promise<Actualite[]> {
 }
 
 export async function getPartenaires(): Promise<Partenaire[]> {
-  const rows = await prisma.partenaire.findMany({ orderBy: { order: "asc" } });
+  const rows = await prisma.partenaire.findMany({ where: { published: true }, orderBy: { order: "asc" } });
   return rows.map((p) => ({
     acronym: p.acronym,
     name: p.name,
     role: p.role,
-    logoUrl: PARTENAIRE_LOGOS[p.acronym] ?? null,
+    logoUrl: p.logoUrl ?? PARTENAIRE_LOGOS[p.acronym] ?? null,
   }));
 }
 
 export async function getTemoignages(): Promise<Temoignage[]> {
-  const rows = await prisma.temoignage.findMany({ orderBy: { order: "asc" } });
+  const rows = await prisma.temoignage.findMany({ where: { published: true }, orderBy: { order: "asc" } });
   return rows.map((t) => ({
     name: t.name,
     role: t.role,
     college: t.college,
     quote: t.quote,
     initials: t.initials,
+  }));
+}
+
+export async function getRessources(): Promise<Ressource[]> {
+  const rows = await prisma.ressource.findMany({ where: { published: true }, orderBy: { order: "asc" } });
+  return rows.map((r) => ({
+    id: r.id,
+    title: r.title,
+    type: r.type,
+    category: r.category,
+    size: r.size,
+    url: r.url,
   }));
 }

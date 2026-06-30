@@ -379,22 +379,41 @@ model Actualite {
   category    String
   publishedAt DateTime
   readingTime Int
+  published   Boolean  @default(true)
 }
 
 model Partenaire {
-  id      String @id @default(cuid())
-  acronym String @unique
-  name    String
-  role    String
-  order   Int    @default(0)
+  id        String  @id @default(cuid())
+  acronym   String  @unique
+  name      String
+  role      String
+  logoUrl   String? // logo (Vercel Blob / public) — sinon repli sur l'acronyme
+  order     Int     @default(0)
+  published Boolean @default(true)
 }
 
 model Temoignage {
-  id       String @id @default(cuid())
-  name     String
-  role     String
-  college  String
-  quote    String @db.Text
-  initials String
-  order    Int    @default(0)
+  id        String  @id @default(cuid())
+  name      String
+  role      String
+  college   String
+  quote     String  @db.Text
+  initials  String
+  order     Int     @default(0)
+  published Boolean @default(true)
+}
+
+// Ressources publiques de la vitrine (§9.2 — bibliothèque), gérées par l'admin.
+model Ressource {
+  id        String  @id @default(cuid())
+  title     String
+  type      String // PDF, ePoc, Vidéo, DOCX…
+  category  String // Guide, Référentiel, Module, Tutoriel, Modèle…
+  size      String? // ex. « 2,4 Mo »
+  url       String? // lien de téléchargement (Blob ou externe)
+  order     Int     @default(0)
+  published Boolean @default(true)
+  createdAt DateTime @default(now())
+
+  @@index([order])
 }

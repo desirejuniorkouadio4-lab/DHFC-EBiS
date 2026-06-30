@@ -10,6 +10,7 @@ import {
   ClipboardCheck,
   MessagesSquare,
   Mail,
+  LayoutTemplate,
   type LucideIcon,
 } from "lucide-react";
 
@@ -33,6 +34,7 @@ export function staffNav(role: string): { main: NavItem[]; secondary: NavItem[] 
         { href: "/admin/cohortes", label: "Cohortes", icon: GraduationCap },
         { href: "/admin/media", label: "Médiathèque", icon: ImageIcon },
         { href: "/concepteur", label: "Contenus", icon: PencilRuler },
+        { href: "/admin/vitrine", label: "Site vitrine", icon: LayoutTemplate },
         { href: "/admin/analytics", label: "Analytique", icon: BarChart3 },
         { href: "/admin/parametres", label: "Paramètres", icon: Settings },
       ],
