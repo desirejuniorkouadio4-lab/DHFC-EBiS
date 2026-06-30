@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import type { Parcours, Actualite, Partenaire, Temoignage } from "@/lib/data";
+import { PARTENAIRE_LOGOS } from "@/lib/data";
 import type { ProgrammeModule } from "@/components/marketing/programme-accordion";
 
 /**
@@ -153,7 +154,12 @@ export async function getActualites(): Promise<Actualite[]> {
 
 export async function getPartenaires(): Promise<Partenaire[]> {
   const rows = await prisma.partenaire.findMany({ orderBy: { order: "asc" } });
-  return rows.map((p) => ({ acronym: p.acronym, name: p.name, role: p.role }));
+  return rows.map((p) => ({
+    acronym: p.acronym,
+    name: p.name,
+    role: p.role,
+    logoUrl: PARTENAIRE_LOGOS[p.acronym] ?? null,
+  }));
 }
 
 export async function getTemoignages(): Promise<Temoignage[]> {

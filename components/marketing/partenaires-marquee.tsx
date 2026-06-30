@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-type Partenaire = { acronym: string; name: string; role: string };
+type Partenaire = { acronym: string; name: string; role: string; logoUrl?: string | null };
 
 /**
  * Carrousel de partenaires en défilement continu (marquee).
@@ -54,11 +54,21 @@ export function PartenairesMarquee({ partenaires }: { partenaires: Partenaire[] 
           <div key={`${p.acronym}-${i}`} className="w-[42%] shrink-0 sm:w-[30%] lg:w-[14%]">
             <div
               title={p.name}
-              className="group flex h-full flex-col items-center justify-center gap-2 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-6 text-center transition-all duration-300 hover:-translate-y-1 hover:border-orange-300 hover:shadow-lg"
+              className="group flex h-full min-h-[148px] flex-col items-center justify-center gap-2 rounded-2xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-6 text-center transition-all duration-300 hover:-translate-y-1 hover:border-orange-300 hover:shadow-lg"
             >
-              <span className="font-display text-xl font-extrabold tracking-tight text-neutral-400 transition-colors group-hover:text-orange-600">
-                {p.acronym}
-              </span>
+              {p.logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={p.logoUrl}
+                  alt={`Logo ${p.acronym}`}
+                  className="h-14 w-auto max-w-full object-contain grayscale transition-all duration-300 group-hover:grayscale-0"
+                  loading="lazy"
+                />
+              ) : (
+                <span className="font-display text-xl font-extrabold tracking-tight text-neutral-400 transition-colors group-hover:text-orange-600">
+                  {p.acronym}
+                </span>
+              )}
               <span className="text-[11px] leading-tight text-[var(--text-secondary)]">{p.role}</span>
             </div>
           </div>

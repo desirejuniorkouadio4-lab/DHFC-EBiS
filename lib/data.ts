@@ -313,6 +313,14 @@ export type Partenaire = {
   acronym: string;
   name: string;
   role: string;
+  logoUrl?: string | null;
+};
+
+/** Logos partenaires (public/), par acronyme. Sinon repli sur l'acronyme. */
+export const PARTENAIRE_LOGOS: Record<string, string> = {
+  MENAET: "/logo-menaet.jpg",
+  AUF: "/logo-auf.png",
+  AFD: "/Logo_de_l'Agence_française_de_développement_(AFD).png",
 };
 
 export const PARTENAIRES: Partenaire[] = [

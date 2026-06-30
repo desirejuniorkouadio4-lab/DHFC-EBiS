@@ -54,9 +54,16 @@ export default async function PartenairesPage() {
                 return (
                   <RevealItem key={acr}>
                     <article className="group flex h-full items-start gap-5 rounded-3xl border border-[var(--border-subtle)] bg-[var(--bg-elevated)] p-7 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg">
-                      <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500/10 to-green-500/10 font-display text-lg font-extrabold text-orange-600">
-                        {p.acronym.slice(0, 3)}
-                      </span>
+                      {p.logoUrl ? (
+                        <span className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-[var(--border-subtle)] bg-white p-2">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={p.logoUrl} alt={`Logo ${p.acronym}`} className="h-full w-full object-contain" />
+                        </span>
+                      ) : (
+                        <span className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-orange-500/10 to-green-500/10 font-display text-lg font-extrabold text-orange-600">
+                          {p.acronym.slice(0, 3)}
+                        </span>
+                      )}
                       <div>
                         <h3 className="font-display text-xl font-extrabold">{p.acronym}</h3>
                         <p className="mt-1 text-sm font-medium text-orange-600">{p.role}</p>
