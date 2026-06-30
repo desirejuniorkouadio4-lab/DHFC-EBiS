@@ -61,7 +61,7 @@ export function PartenairesMarquee({ partenaires }: { partenaires: Partenaire[] 
                 <img
                   src={p.logoUrl}
                   alt={`Logo ${p.acronym}`}
-                  className="h-14 w-auto max-w-full object-contain grayscale transition-all duration-300 group-hover:grayscale-0"
+                  className="h-14 w-auto max-w-full object-contain transition-transform duration-300 group-hover:scale-105"
                   loading="lazy"
                 />
               ) : (
