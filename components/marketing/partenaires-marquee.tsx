@@ -65,7 +65,7 @@ export function PartenairesMarquee({ partenaires }: { partenaires: Partenaire[] 
                   loading="lazy"
                 />
               ) : (
-                <span className="font-display text-xl font-extrabold tracking-tight text-neutral-400 transition-colors group-hover:text-orange-600">
+                <span className="font-display text-xl font-extrabold tracking-tight text-neutral-400 grayscale transition-all duration-300 group-hover:text-orange-600 group-hover:grayscale-0">
                   {p.acronym}
                 </span>
               )}
