@@ -3,15 +3,19 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Pencil, Trash2, X, Eye, EyeOff, Save, Loader2 } from "lucide-react";
+import { Uploader } from "@/components/upload/uploader";
 import { cn } from "@/lib/utils";
 
 export type FieldDef = {
   name: string;
   label: string;
-  type?: "text" | "textarea" | "number" | "date";
+  type?: "text" | "textarea" | "number" | "date" | "image";
   placeholder?: string;
   required?: boolean;
   full?: boolean;
+  /** Pour type:"image" — passé à l'Uploader (Blob ou disque dev). */
+  uploadPrefix?: string;
+  blobEnabled?: boolean;
 };
 
 export type EntityItem = {
@@ -24,6 +28,58 @@ export type EntityItem = {
 
 const inputClass =
   "h-10 w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-3 text-sm outline-none transition-colors focus:border-orange-500";
+
+/** Champ image : aperçu + upload Blob + URL stockée dans un input caché. */
+function ImageField({
+  name,
+  initialUrl,
+  prefix,
+  blobEnabled,
+  placeholder,
+}: {
+  name: string;
+  initialUrl: string;
+  prefix: string;
+  blobEnabled: boolean;
+  placeholder?: string;
+}) {
+  const [url, setUrl] = useState(initialUrl);
+  return (
+    <div className="space-y-2 rounded-lg border border-dashed border-[var(--border-subtle)] p-3">
+      <input type="hidden" name={name} value={url} />
+      <div className="flex items-center gap-3">
+        {url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={url} alt="" className="h-14 w-14 shrink-0 rounded-lg border border-[var(--border-subtle)] bg-white object-contain p-1" />
+        ) : (
+          <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-lg border border-dashed border-[var(--border-subtle)] text-xs text-[var(--text-secondary)]">—</span>
+        )}
+        <div className="min-w-0 flex-1">
+          <Uploader
+            blobEnabled={blobEnabled}
+            prefix={prefix}
+            accept="image/png,image/jpeg,image/webp,image/svg+xml,image/avif"
+            maxMb={3}
+            compact
+            hint="PNG, JPG, SVG ou WebP — 3 Mo max."
+            onUploaded={async (r) => setUrl(r.url)}
+          />
+        </div>
+      </div>
+      <input
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
+        placeholder={placeholder ?? "ou collez l'URL d'une image"}
+        className="h-9 w-full rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] px-2 text-xs outline-none focus:border-orange-500"
+      />
+      {url && (
+        <button type="button" onClick={() => setUrl("")} className="text-xs font-semibold text-[var(--text-secondary)] hover:text-red-500">
+          Retirer l'image
+        </button>
+      )}
+    </div>
+  );
+}
 
 /** Gestionnaire CRUD générique d'une entité de contenu vitrine. */
 export function EntityManager({
@@ -89,7 +145,7 @@ export function EntityManager({
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             {fields.map((f) => (
-              <label key={f.name} className={cn("space-y-1", f.full && "sm:col-span-2")}>
+              <label key={f.name} className={cn("space-y-1", (f.full || f.type === "image") && "sm:col-span-2")}>
                 <span className="text-xs font-medium text-[var(--text-secondary)]">
                   {f.label}
                   {f.required && <span className="text-orange-600"> *</span>}
@@ -103,6 +159,8 @@ export function EntityManager({
                     rows={3}
                     className="w-full resize-y rounded-lg border border-[var(--border-subtle)] bg-[var(--bg-primary)] p-2.5 text-sm outline-none focus:border-orange-500"
                   />
+                ) : f.type === "image" ? (
+                  <ImageField name={f.name} initialUrl={(current?.[f.name] as string) ?? ""} prefix={f.uploadPrefix ?? "vitrine"} blobEnabled={!!f.blobEnabled} placeholder={f.placeholder} />
                 ) : (
                   <input
                     name={f.name}
@@ -141,6 +199,10 @@ export function EntityManager({
                   it.published ? "border-[var(--border-subtle)]" : "border-dashed border-[var(--border-subtle)] opacity-70"
                 )}
               >
+                {typeof it.logoUrl === "string" && it.logoUrl && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={it.logoUrl} alt="" className="h-10 w-10 shrink-0 rounded-lg border border-[var(--border-subtle)] bg-white object-contain p-1" />
+                )}
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium">{d.primary}</p>
                   {d.secondary && <p className="truncate text-xs text-[var(--text-secondary)]">{d.secondary}</p>}

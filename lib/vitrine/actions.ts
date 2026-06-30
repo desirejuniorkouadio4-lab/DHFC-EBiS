@@ -25,6 +25,14 @@ function revalidateVitrine(path: string) {
   revalidatePath("/");
 }
 
+/** Enregistre l'URL d'un logo téléversé (Blob ou disque dev). */
+export async function setPartenaireLogo(id: string, data: { url: string }): Promise<void> {
+  await guard();
+  if (!data?.url || !/^(https?:\/\/|\/uploads\/)/.test(data.url)) return;
+  await prisma.partenaire.update({ where: { id }, data: { logoUrl: data.url } });
+  revalidateVitrine("/partenaires");
+}
+
 /* ---------------- Partenaires ---------------- */
 export async function createPartenaire(formData: FormData): Promise<void> {
   await guard();

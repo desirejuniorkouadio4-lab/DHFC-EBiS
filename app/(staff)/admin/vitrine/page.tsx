@@ -21,6 +21,7 @@ export default async function AdminVitrinePage() {
     listRessourcesAdmin(),
     listTemoignagesAdmin(),
   ]);
+  const blobEnabled = !!process.env.BLOB_READ_WRITE_TOKEN;
 
   const sections = [
     {
@@ -36,7 +37,7 @@ export default async function AdminVitrinePage() {
             { name: "acronym", label: "Acronyme", required: true, placeholder: "AFD" },
             { name: "name", label: "Nom complet", required: true, full: true, placeholder: "Agence Française de Développement" },
             { name: "role", label: "Rôle", placeholder: "Bailleur de fonds" },
-            { name: "logoUrl", label: "URL du logo", placeholder: "/logo-afd.png", full: true },
+            { name: "logoUrl", label: "Logo du partenaire", type: "image", uploadPrefix: "partenaires", blobEnabled },
             { name: "order", label: "Ordre", type: "number" },
           ]}
           create={createPartenaire}
