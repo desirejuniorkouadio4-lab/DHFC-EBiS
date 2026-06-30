@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { Quote, ChevronLeft, ChevronRight } from "lucide-react";
 import { Container } from "@/components/ui/container";
 import { SectionHeading } from "@/components/ui/section-heading";
@@ -11,11 +11,23 @@ import type { Temoignage } from "@/lib/data";
 export function Temoignages({ temoignages }: { temoignages: Temoignage[] }) {
   const [index, setIndex] = useState(0);
   const [dir, setDir] = useState(1);
+  const [paused, setPaused] = useState(false);
+  const reduce = useReducedMotion();
 
   function go(next: number) {
     setDir(next > index || (index === temoignages.length - 1 && next === 0) ? 1 : -1);
     setIndex((next + temoignages.length) % temoignages.length);
   }
+
+  // Autoplay : avance toutes les 6s, en pause au survol/focus ou si reduce-motion.
+  useEffect(() => {
+    if (paused || reduce || temoignages.length < 2) return;
+    const id = setTimeout(() => {
+      setDir(1);
+      setIndex((i) => (i + 1) % temoignages.length);
+    }, 6000);
+    return () => clearTimeout(id);
+  }, [index, paused, reduce, temoignages.length]);
 
   const t = temoignages[index];
   if (!t) return null;
@@ -30,7 +42,13 @@ export function Temoignages({ temoignages }: { temoignages: Temoignage[] }) {
           description="Des milliers d'enseignants ont déjà renforcé leurs compétences grâce au dispositif. Voici leurs retours."
         />
 
-        <div className="relative mx-auto mt-10 max-w-3xl sm:mt-14">
+        <div
+          className="relative mx-auto mt-10 max-w-3xl sm:mt-14"
+          onMouseEnter={() => setPaused(true)}
+          onMouseLeave={() => setPaused(false)}
+          onFocusCapture={() => setPaused(true)}
+          onBlurCapture={() => setPaused(false)}
+        >
           <div className="absolute -left-1 -top-5 text-orange-500/15">
             <Quote className="h-16 w-16 sm:h-24 sm:w-24" />
           </div>

@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
-import { Menu, X, LogIn, ArrowRight } from "lucide-react";
+import { Menu, X, LogIn, ArrowRight, LayoutDashboard } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
 import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
@@ -13,8 +13,10 @@ import { ThemeToggle } from "./theme-toggle";
 import { NAV_LINKS } from "@/lib/data";
 import { cn } from "@/lib/utils";
 
+type HeaderSession = { initials: string; avatarUrl: string | null; homeHref: string } | null;
+
 /** Header sticky : transparent en haut de page, solide (glass) au scroll (§9.3). */
-export function Header() {
+export function Header({ session }: { session?: HeaderSession }) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -83,14 +85,40 @@ export function Header() {
 
         <div className="flex items-center gap-2">
           <ThemeToggle className="hidden sm:inline-flex" />
-          <Button href="/connexion" variant="ghost" size="sm" className="hidden md:inline-flex">
-            <LogIn className="h-4 w-4" />
-            Se connecter
-          </Button>
-          <Button href="/parcours" size="sm" className="hidden sm:inline-flex">
-            Découvrir
-            <ArrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-0.5" />
-          </Button>
+          {session ? (
+            <>
+              <Button href={session.homeHref} variant="ghost" size="sm" className="hidden md:inline-flex">
+                <LayoutDashboard className="h-4 w-4" />
+                Mon espace
+              </Button>
+              <Link
+                href="/profil"
+                aria-label="Mon profil"
+                className="hidden h-9 shrink-0 sm:inline-flex"
+                title="Mon profil"
+              >
+                {session.avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={session.avatarUrl} alt="" className="h-9 w-9 rounded-full object-cover" />
+                ) : (
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-green-500 text-xs font-bold text-white">
+                    {session.initials}
+                  </span>
+                )}
+              </Link>
+            </>
+          ) : (
+            <>
+              <Button href="/connexion" variant="ghost" size="sm" className="hidden md:inline-flex">
+                <LogIn className="h-4 w-4" />
+                Se connecter
+              </Button>
+              <Button href="/parcours" size="sm" className="hidden sm:inline-flex">
+                Découvrir
+                <ArrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-0.5" />
+              </Button>
+            </>
+          )}
 
           <button
             type="button"
@@ -157,12 +185,25 @@ export function Header() {
                 <span className="text-sm font-medium text-[var(--text-secondary)]">Apparence</span>
                 <ThemeToggle />
               </div>
-              <Button href="/connexion" variant="outline" size="lg" className="w-full">
-                <LogIn className="h-5 w-5" /> Se connecter
-              </Button>
-              <Button href="/parcours" size="lg" className="w-full">
-                Découvrir les parcours <ArrowRight className="h-5 w-5" />
-              </Button>
+              {session ? (
+                <>
+                  <Button href={session.homeHref} variant="outline" size="lg" className="w-full">
+                    <LayoutDashboard className="h-5 w-5" /> Mon espace
+                  </Button>
+                  <Button href="/profil" size="lg" className="w-full">
+                    Mon profil <ArrowRight className="h-5 w-5" />
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button href="/connexion" variant="outline" size="lg" className="w-full">
+                    <LogIn className="h-5 w-5" /> Se connecter
+                  </Button>
+                  <Button href="/parcours" size="lg" className="w-full">
+                    Découvrir les parcours <ArrowRight className="h-5 w-5" />
+                  </Button>
+                </>
+              )}
             </div>
           </motion.div>
         )}

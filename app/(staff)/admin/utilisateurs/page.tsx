@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Inbox, Download, FileSpreadsheet, CheckCircle2, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Inbox, Download, Upload, FileSpreadsheet, CheckCircle2, AlertTriangle } from "lucide-react";
 import { requireRole } from "@/lib/auth-helpers";
 import { listUsers, listCohortsAdmin } from "@/lib/admin/db";
 import { UserSearch } from "@/components/admin/user-search";
@@ -77,7 +77,7 @@ export default async function AdminUsersPage({
         </div>
         <details className="group border-t border-[var(--border-subtle)] pt-3">
           <summary className="flex cursor-pointer list-none items-center gap-2 text-sm font-semibold text-orange-600">
-            <Download className="h-4 w-4 rotate-180" /> Importer des comptes (CSV)
+            <Upload className="h-4 w-4" /> Importer des comptes (CSV)
           </summary>
           <CsvImport />
         </details>

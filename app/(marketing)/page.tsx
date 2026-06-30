@@ -11,15 +11,18 @@ import { ActualitesSection } from "@/components/marketing/actualites-section";
 import { CtaFinal } from "@/components/marketing/cta-final";
 import { JsonLd } from "@/components/seo/json-ld";
 import { getTemoignages } from "@/lib/content";
+import { getSessionUser } from "@/lib/auth-helpers";
+import { roleHomePath } from "@/lib/rbac";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const temoignages = await getTemoignages();
+  const [temoignages, user] = await Promise.all([getTemoignages(), getSessionUser()]);
+  const homeHref = user ? roleHomePath(user.role) : undefined;
   return (
     <>
       <JsonLd />
-      <Hero />
+      <Hero homeHref={homeHref} />
       <Stats />
       <Mission />
       <Hybride />

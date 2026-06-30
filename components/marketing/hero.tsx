@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, PlayCircle, Sparkles, MousePointer2 } from "lucide-react";
+import { ArrowRight, PlayCircle, Sparkles, MousePointer2, LayoutDashboard } from "lucide-react";
 import { Container } from "@/components/ui/container";
 import { Button } from "@/components/ui/button";
 import { LogoMark } from "@/components/brand/logo";
@@ -10,7 +10,7 @@ import { DISCIPLINES } from "@/lib/data";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
-export function Hero() {
+export function Hero({ homeHref }: { homeHref?: string }) {
   const reduce = useReducedMotion();
 
   const container = {
@@ -104,10 +104,17 @@ export function Hero() {
               Découvrir les parcours
               <ArrowRight className="h-5 w-5 transition-transform group-hover/btn:translate-x-1" />
             </Button>
-            <Button href="/connexion" variant="outline" size="lg">
-              <PlayCircle className="h-5 w-5" />
-              Se connecter
-            </Button>
+            {homeHref ? (
+              <Button href={homeHref} variant="outline" size="lg">
+                <LayoutDashboard className="h-5 w-5" />
+                Mon espace
+              </Button>
+            ) : (
+              <Button href="/connexion" variant="outline" size="lg">
+                <PlayCircle className="h-5 w-5" />
+                Se connecter
+              </Button>
+            )}
           </motion.div>
 
           {/* Disciplines */}
